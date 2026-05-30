@@ -17,6 +17,7 @@ const envSchema = z.object({
   WHATSAPP_PHONE_NUMBER_ID: z.string().min(1),
   WHATSAPP_VERIFY_TOKEN: z.string().min(1),
   WHATSAPP_APP_SECRET: z.string().min(1),
+  WHATSAPP_GRAPH_API_VERSION: z.string().min(1).default('v21.0'),
 
   GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1),
   GCP_PROJECT_ID: z.string().min(1),
@@ -52,6 +53,7 @@ export const config = {
     phoneNumberId: parsedEnv.data.WHATSAPP_PHONE_NUMBER_ID,
     verifyToken: parsedEnv.data.WHATSAPP_VERIFY_TOKEN,
     appSecret: parsedEnv.data.WHATSAPP_APP_SECRET,
+    graphApiVersion: parsedEnv.data.WHATSAPP_GRAPH_API_VERSION,
   },
   gcp: {
     credentialsPath: parsedEnv.data.GOOGLE_APPLICATION_CREDENTIALS,

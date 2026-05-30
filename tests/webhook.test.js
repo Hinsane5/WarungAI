@@ -4,7 +4,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { app } from '../src/app.js';
-import { clearProcessedMessagesForTest } from '../src/services/messageDedupeService.js';
+import { resetMessageDedupeStore } from '../src/services/messageDedupeService.js';
 
 const textMessageFixture = JSON.parse(
   readFileSync(new URL('./fixtures/webhooks/textMessage.json', import.meta.url), 'utf8'),
@@ -50,7 +50,7 @@ async function waitForExpectation(assertion) {
 
 describe('/webhook', () => {
   beforeEach(() => {
-    clearProcessedMessagesForTest();
+    resetMessageDedupeStore();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(createFetchResponse()));
   });
 
