@@ -12,7 +12,11 @@
     "start": "node server.js",
     "test": "vitest run",
     "lint": "eslint .",
-    "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" server.js eslint.config.js vitest.config.js package.json .prettierrc"
+    "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" server.js eslint.config.js vitest.config.js package.json .prettierrc",
+    "db:start": "mkdir -p ./.local/mongo && ${MONGOD:-mongod} --dbpath ./.local/mongo --port 27017 --bind_ip 127.0.0.1",
+    "db:inspect": "node scripts/inspect-db.mjs",
+    "db:reset": "rm -rf ./.local/mongo/* && echo 'Local DB wiped (restart db:start).'",
+    "sim": "node scripts/simulate-webhook.mjs"
   },
   "dependencies": {
     "@google-cloud/speech": "7.3.1",

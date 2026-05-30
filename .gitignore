@@ -37,3 +37,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Local dev data (MongoDB, etc.)
+.local/
