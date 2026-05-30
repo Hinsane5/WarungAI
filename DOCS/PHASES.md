@@ -17,7 +17,7 @@
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 0 | Project foundation | ⬜ not started |
+| 0 | Project foundation | ✅ done |
 | 1 | WhatsApp echo loop | ⬜ |
 | 2 | Data layer + onboarding | ⬜ |
 | 3 | Conversational POS (text) + confirmation | ⬜ |

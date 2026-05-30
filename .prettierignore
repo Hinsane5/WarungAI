@@ -1,0 +1,11 @@
+DOCS/
+MockUI_3/
+MockUI_3.zip
+node_modules/
+coverage/
+dist/
+build/
+.git/
+.env
+.env.*
+!.env.example

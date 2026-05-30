@@ -195,25 +195,28 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant CRON as node-cron (nightly)
+    participant CRON as node-cron nightly
     participant JOB as Jobs
     participant DB as MongoDB
     participant Q as Quota Guard
     participant WA as WhatsApp Cloud API
 
-    CRON->>JOB: trigger nightly batch
-    JOB->>DB: read transaction history per shop/item/customer
-    JOB->>JOB: predict stock-out & expiry (avg daily sales + seasonality)
-    JOB->>JOB: refresh credit scores
-    JOB->>JOB: RFM segmentation + restock-cycle prediction
-    JOB->>DB: persist insights & flags
-    JOB->>Q: check per-shop "Koin Bot" quota before any customer send
-    alt quota available
-        JOB->>WA: send restock reminders / segmented promos
-    else quota exhausted
-        JOB->>DB: queue / skip (notify owner low on credits)
+    CRON->>JOB: Trigger nightly batch
+    JOB->>DB: Read transaction history per shop item customer
+    JOB->>JOB: Predict stock out and expiry
+    JOB->>JOB: Refresh credit scores
+    JOB->>JOB: Run RFM segmentation and restock cycle prediction
+    JOB->>DB: Persist insights and flags
+    JOB->>Q: Check per shop Koin Bot quota before customer send
+
+    alt Quota available
+        JOB->>WA: Send restock reminders or segmented promos
+    else Quota exhausted
+        JOB->>DB: Queue or skip broadcast
+        JOB->>DB: Notify owner low on credits
     end
-    Note over JOB,WA: Owner-facing low-stock alerts are not metered; customer broadcasts are.
+
+    Note over JOB,WA: Owner alerts are not metered and customer broadcasts are metered
 ```
 
 ### 4.4 Use-case overview

@@ -1,0 +1,16 @@
+process.env.NODE_ENV = 'test';
+process.env.PORT = '3000';
+process.env.LOG_LEVEL = 'silent';
+process.env.PUBLIC_BASE_URL = 'https://example.test';
+process.env.MONGODB_URI = 'mongodb://localhost:27017/warungai_test';
+process.env.WHATSAPP_TOKEN = 'test-whatsapp-token';
+process.env.WHATSAPP_PHONE_NUMBER_ID = 'test-phone-number-id';
+process.env.WHATSAPP_VERIFY_TOKEN = 'test-verify-token';
+process.env.WHATSAPP_APP_SECRET = 'test-app-secret';
+process.env.GOOGLE_APPLICATION_CREDENTIALS = './secrets/test-gcp-service-account.json';
+process.env.GCP_PROJECT_ID = 'warungai-test';
+process.env.GCP_LOCATION = 'us-central1';
+process.env.GEMINI_MODEL = 'gemini-2.5-flash';
+process.env.FREE_TIER_DAILY_TXN_CAP = '50';
+process.env.KOIN_BOT_ENABLED = 'true';
+process.env.EXTRACTION_CONFIDENCE_THRESHOLD = '0.6';
