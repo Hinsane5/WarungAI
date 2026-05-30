@@ -24,10 +24,17 @@ How to run the app locally and see your progress by hand. Two paths:
 
 ### 1. Start MongoDB (one terminal)
 ```bash
-mkdir -p .local/mongo   # first time only (already gitignored)
-~/mongodb-macos-aarch64-8.0.3/bin/mongod --dbpath ./.local/mongo --port 27017 --bind_ip 127.0.0.1
+npm run db:start          # starts mongod as a single-node replica set (rs0)
 ```
-Leave it running. (Tip: add the binary dir to your `PATH` so you can just type `mongod`.)
+First time only, in a second terminal, initialize the replica set (enables transactions):
+```bash
+npm run db:init           # idempotent — says "already initialized" on later runs
+```
+Leave `db:start` running.
+
+> `db:start` calls `mongod`. If it's not on your `PATH`, either add it once
+> (`echo 'export PATH="$HOME/mongodb-macos-aarch64-8.0.3/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc`)
+> or run with an override: `MONGOD=~/mongodb-macos-aarch64-8.0.3/bin/mongod npm run db:start`.
 
 ### 2. Start the server (second terminal)
 ```bash
@@ -143,12 +150,17 @@ real number.
 
 ---
 
-## ⚠️ Heads-up for Phase 3
+## Phase 3 prerequisites (set up once)
 
-Phase 3 commits transactions **atomically** (stock + cash together), which uses MongoDB
-multi-document transactions. Those require a **replica set**, not a standalone `mongod`.
-Easiest local options when you get there:
-- start mongod with `--replSet rs0` then `rs.initiate()` once, **or**
-- use a free **MongoDB Atlas** cluster (already a replica set) and point `MONGODB_URI` at it.
+Phase 3 introduces (a) AI extraction and (b) atomic stock+cash commits. Two one-time setups:
 
-Not needed for Phases 0–2.
+**1. MongoDB transactions** — already handled by the npm scripts above: `npm run db:start`
+(now runs with `--replSet rs0`) + `npm run db:init` (once). A single-node replica set is
+enough. Alternative: a free **MongoDB Atlas** cluster (already a replica set) — just point
+`MONGODB_URI` at it and skip the local replica-set steps.
+
+**2. Gemini API access** — get a key from **Google AI Studio**
+(<https://aistudio.google.com/apikey>), add `GEMINI_API_KEY=...` to `.env`. This is the fast
+path (no `gcloud`/service account). Full **GCP / Vertex AI** setup is only required in
+**Phase 4** for Speech-to-Text. `GCP_PROJECT_ID=replace-me` and a missing service-account
+file are fine for Phase 3 text-only work.

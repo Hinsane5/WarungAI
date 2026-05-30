@@ -13,9 +13,10 @@
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" server.js eslint.config.js vitest.config.js package.json .prettierrc",
-    "db:start": "mkdir -p ./.local/mongo && ${MONGOD:-mongod} --dbpath ./.local/mongo --port 27017 --bind_ip 127.0.0.1",
+    "db:start": "mkdir -p ./.local/mongo && ${MONGOD:-mongod} --dbpath ./.local/mongo --port 27017 --bind_ip 127.0.0.1 --replSet rs0",
+    "db:init": "node scripts/init-replset.mjs",
     "db:inspect": "node scripts/inspect-db.mjs",
-    "db:reset": "rm -rf ./.local/mongo/* && echo 'Local DB wiped (restart db:start).'",
+    "db:reset": "rm -rf ./.local/mongo/* && echo 'Local DB wiped (restart db:start, then db:init).'",
     "sim": "node scripts/simulate-webhook.mjs"
   },
   "dependencies": {
