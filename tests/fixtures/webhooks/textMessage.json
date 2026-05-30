@@ -1,0 +1,39 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "waba-test",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "15551234567",
+              "phone_number_id": "test-phone-number-id"
+            },
+            "contacts": [
+              {
+                "wa_id": "6281234567890",
+                "profile": {
+                  "name": "Bu Sri"
+                }
+              }
+            ],
+            "messages": [
+              {
+                "from": "6281234567890",
+                "id": "wamid.test-1",
+                "timestamp": "1780121282",
+                "type": "text",
+                "text": {
+                  "body": "halo warungai"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

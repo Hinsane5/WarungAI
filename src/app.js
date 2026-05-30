@@ -3,6 +3,7 @@ import pinoHttp from 'pino-http';
 import { randomUUID } from 'node:crypto';
 
 import { getDbStatus } from './config/db.js';
+import { webhookRouter } from './routes/webhook.js';
 import { logger } from './utils/logger.js';
 
 function captureRawBody(req, _res, buffer) {
@@ -35,6 +36,8 @@ export function createApp() {
   app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'ok', db: getDbStatus() });
   });
+
+  app.use('/webhook', webhookRouter);
 
   return app;
 }
