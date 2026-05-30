@@ -2,7 +2,7 @@ import { config } from '../config/index.js';
 import { Session } from '../models/Session.js';
 import { normalizePhone } from '../utils/phone.js';
 
-function isStale(session, now = new Date()) {
+export function isSessionStale(session, now = new Date()) {
   if (!session?.lastActivityAt) {
     return false;
   }
@@ -35,7 +35,7 @@ export async function getOrCreateSession({ shopId, ownerPhone }) {
     return session;
   }
 
-  if (isStale(session)) {
+  if (isSessionStale(session)) {
     session.state = 'idle';
     session.context = idleContext();
   }

@@ -1,10 +1,4 @@
-function toE164(waId) {
-  if (!waId) {
-    return null;
-  }
-
-  return waId.startsWith('+') ? waId : `+${waId}`;
-}
+import { normalizePhone } from '../utils/phone.js';
 
 function extractText(message) {
   if (message.type === 'text') {
@@ -40,7 +34,7 @@ export function normalizeInboundMessages(payload) {
 
       for (const message of value.messages ?? []) {
         normalized.push({
-          from: toE164(message.from),
+          from: normalizePhone(message.from),
           messageId: message.id,
           type: message.type,
           text: extractText(message),

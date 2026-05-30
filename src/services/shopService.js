@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Shop } from '../models/Shop.js';
 import { normalizePhone } from '../utils/phone.js';
 
-function buildDefaultShopName(ownerName) {
+export function buildDefaultShopName(ownerName) {
   return ownerName ? `Warung ${ownerName}` : 'Warung Baru';
 }
 
