@@ -1,4 +1,5 @@
 import { sendText } from '../messaging/whatsapp.js';
+import { confirmPendingTransaction, handleTextPos } from '../services/posService.js';
 import { findOrCreateByOwnerPhone } from '../services/shopService.js';
 import { getOrCreateSession } from '../services/sessionService.js';
 
@@ -14,7 +15,7 @@ export async function routeInboundMessage(message) {
     ownerPhone: message.from,
     ownerName: message.profileName,
   });
-  await getOrCreateSession({ shopId: shop._id, ownerPhone: message.from });
+  const session = await getOrCreateSession({ shopId: shop._id, ownerPhone: message.from });
 
   if (created) {
     await sendText(message.from, WELCOME_MESSAGE);
@@ -26,6 +27,13 @@ export async function routeInboundMessage(message) {
     return { handled: true, action: 'unsupported_message' };
   }
 
-  await sendText(message.from, `Anda menulis: ${message.text}`);
-  return { handled: true, action: 'echo' };
+  if (session.state === 'awaiting_confirmation') {
+    return confirmPendingTransaction({ shop, session, message });
+  }
+
+  if (session.state === 'fast_text_fallback') {
+    await sendText(message.from, 'Gunakan format: <jual/masuk> <jumlah> <barang>.');
+  }
+
+  return handleTextPos({ shop, session, message });
 }

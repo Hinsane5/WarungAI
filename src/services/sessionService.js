@@ -19,6 +19,10 @@ function idleContext() {
   };
 }
 
+function plainContext(context) {
+  return context?.toObject?.() ?? context ?? {};
+}
+
 export async function getOrCreateSession({ shopId, ownerPhone }) {
   const normalizedOwnerPhone = normalizePhone(ownerPhone);
   let session = await Session.findOne({ ownerPhone: normalizedOwnerPhone });
@@ -49,7 +53,7 @@ export async function getOrCreateSession({ shopId, ownerPhone }) {
 
 export async function setSessionState(session, state, context = {}) {
   session.state = state;
-  session.context = { ...session.context?.toObject?.(), ...context };
+  session.context = { ...plainContext(session.context), ...context };
   session.lastActivityAt = new Date();
   await session.save();
   return session;

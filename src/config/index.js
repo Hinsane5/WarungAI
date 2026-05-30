@@ -22,6 +22,7 @@ const envSchema = z.object({
   GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1),
   GCP_PROJECT_ID: z.string().min(1),
   GCP_LOCATION: z.string().min(1).default('us-central1'),
+  GEMINI_API_KEY: z.string().min(1),
   GEMINI_MODEL: z.string().min(1).default('gemini-2.5-flash'),
 
   FREE_TIER_DAILY_TXN_CAP: z.coerce.number().int().positive().default(50),
@@ -60,6 +61,7 @@ export const config = {
     credentialsPath: parsedEnv.data.GOOGLE_APPLICATION_CREDENTIALS,
     projectId: parsedEnv.data.GCP_PROJECT_ID,
     location: parsedEnv.data.GCP_LOCATION,
+    geminiApiKey: parsedEnv.data.GEMINI_API_KEY,
     geminiModel: parsedEnv.data.GEMINI_MODEL,
   },
   limits: {

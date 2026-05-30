@@ -1,0 +1,23 @@
+[
+  {
+    "input": "masuk 2 dus indomie, laku 1 galon aqua",
+    "expectedIntent": "pos",
+    "expectedItems": [
+      { "action": "stock_in", "rawName": "indomie", "qty": 2, "unit": "dus" },
+      { "action": "sale", "rawName": "aqua", "qty": 1, "unit": "galon" }
+    ]
+  },
+  {
+    "input": "laku 3 indomie sama 2 aqua gelas",
+    "expectedIntent": "pos",
+    "expectedItems": [
+      { "action": "sale", "rawName": "indomie", "qty": 3, "unit": null },
+      { "action": "sale", "rawName": "aqua gelas", "qty": 2, "unit": null }
+    ]
+  },
+  {
+    "input": "terjual 5kg beras",
+    "expectedIntent": "pos",
+    "expectedItems": [{ "action": "sale", "rawName": "beras", "qty": 5, "unit": "kg" }]
+  }
+]

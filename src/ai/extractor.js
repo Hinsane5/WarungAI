@@ -1,0 +1,291 @@
+import { GoogleGenAI } from '@google/genai';
+import { readFileSync } from 'node:fs';
+
+import { config } from '../config/index.js';
+import { Product } from '../models/Product.js';
+import { logger } from '../utils/logger.js';
+import { extractionResultSchema } from './schemas.js';
+
+const GEMINI_MAX_RETRIES = 2;
+const GEMINI_RETRY_BASE_MS = 500;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isRateLimitError(error) {
+  const status = error?.status ?? error?.code;
+  const message = String(error?.message ?? '');
+  return status === 429 || /\b429\b|RESOURCE_EXHAUSTED|rate limit|quota|too many requests/i.test(message);
+}
+
+const EXTRACT_PROMPT = readFileSync(new URL('./prompts/extract.v1.md', import.meta.url), 'utf8');
+const ACTION_PATTERNS = [
+  { action: 'stock_in', pattern: /\b(masuk|beli|restock|tambah)\b/giu },
+  { action: 'sale', pattern: /\b(laku|jual|terjual|keluar)\b/giu },
+];
+
+const SEGMENT_SPLIT_PATTERN = /\s*(?:,| dan | sama | terus | lalu )\s*/giu;
+const KNOWN_UNITS = new Set(['pcs', 'pc', 'dus', 'box', 'karton', 'galon', 'kg', 'gram', 'gr']);
+const ITEM_PATTERN =
+  /(?<qty>\d+(?:[.,]\d+)?)\s*(?<unit>[a-zA-Z]+)?\s+(?<name>.+?)(?:\s+(?:rp)?(?<price>\d[\d.]*)\s*)?$/iu;
+
+let geminiClient;
+
+function parseNumber(value) {
+  if (!value) {
+    return null;
+  }
+
+  return Number(String(value).replace(/\./g, '').replace(',', '.'));
+}
+
+function detectAction(segment, previousAction = null) {
+  for (const { action, pattern } of ACTION_PATTERNS) {
+    pattern.lastIndex = 0;
+
+    if (pattern.test(segment)) {
+      return action;
+    }
+  }
+
+  return previousAction;
+}
+
+function stripActionWords(segment) {
+  return ACTION_PATTERNS.reduce((text, { pattern }) => text.replace(pattern, ''), segment).trim();
+}
+
+function parseItems(text) {
+  const items = [];
+  let currentAction = null;
+
+  for (const rawSegment of text.split(SEGMENT_SPLIT_PATTERN)) {
+    const segment = rawSegment.trim();
+
+    if (!segment) {
+      continue;
+    }
+
+    currentAction = detectAction(segment, currentAction);
+
+    if (!currentAction) {
+      continue;
+    }
+
+    const itemText = stripActionWords(segment);
+    const match = itemText.match(ITEM_PATTERN);
+
+    if (!match?.groups) {
+      continue;
+    }
+
+    const possibleUnit = match.groups.unit?.toLowerCase() ?? null;
+    const unit = possibleUnit && KNOWN_UNITS.has(possibleUnit) ? match.groups.unit : null;
+    const rawNameSource = unit
+      ? match.groups.name
+      : `${match.groups.unit ?? ''} ${match.groups.name}`;
+    const rawName = rawNameSource.replace(/\s+rp?\d[\d.]*$/iu, '').trim();
+
+    if (!rawName) {
+      continue;
+    }
+
+    items.push({
+      rawName,
+      qty: parseNumber(match.groups.qty),
+      unit,
+      unitPrice: parseNumber(match.groups.price),
+      action: currentAction,
+    });
+  }
+
+  return items;
+}
+
+function inferTransactionType(items) {
+  const actions = new Set(items.map((item) => item.action));
+
+  if (actions.size === 1) {
+    return actions.values().next().value;
+  }
+
+  return null;
+}
+
+function normalizeExtraction(result) {
+  const parsed = extractionResultSchema.parse(result);
+
+  if (parsed.confidence < config.limits.extractionConfidenceThreshold) {
+    return {
+      ...parsed,
+      needsClarification: true,
+      clarificationQuestion:
+        parsed.clarificationQuestion ??
+        'Aku belum yakin. Tolong tulis ulang, contoh: "laku 2 indomie".',
+    };
+  }
+
+  return parsed;
+}
+
+function localExtract(text) {
+  const items = parseItems(text);
+
+  const result = {
+    intent: items.length > 0 ? 'pos' : 'unknown',
+    transactionType: inferTransactionType(items),
+    items,
+    customerRef: null,
+    confidence: items.length > 0 ? 0.82 : 0.2,
+    needsClarification: items.length === 0,
+    clarificationQuestion:
+      items.length === 0
+        ? 'Transaksinya apa? Contoh: "laku 2 indomie" atau "masuk 1 dus aqua".'
+        : null,
+  };
+
+  return normalizeExtraction(result);
+}
+
+function hasUsableGeminiKey() {
+  return (
+    config.gcp.geminiApiKey && !['replace-me', 'test-gemini-key'].includes(config.gcp.geminiApiKey)
+  );
+}
+
+function getGeminiClient() {
+  geminiClient ??= new GoogleGenAI({ apiKey: config.gcp.geminiApiKey });
+  return geminiClient;
+}
+
+async function getCatalogContext(shop) {
+  if (!shop?._id) {
+    return [];
+  }
+
+  const query = Product.find({ shopId: shop._id }).limit(50);
+  const products = typeof query.lean === 'function' ? await query.lean() : await query;
+
+  return products.map((product) => ({
+    name: product.name,
+    aliases: product.aliases ?? [],
+    unit: product.unit ?? null,
+    sellPrice: product.sellPrice ?? null,
+    costPrice: product.costPrice ?? null,
+  }));
+}
+
+function buildGeminiContents({ text, catalog, fallback = false }) {
+  return [
+    EXTRACT_PROMPT,
+    fallback
+      ? 'Fallback pass: use the catalog more aggressively. If still uncertain, ask exactly one clarification question.'
+      : 'Primary pass.',
+    `Catalog JSON:\n${JSON.stringify(catalog)}`,
+    `Owner message:\n${text}`,
+  ].join('\n\n');
+}
+
+const responseJsonSchema = {
+  type: 'object',
+  required: [
+    'intent',
+    'transactionType',
+    'items',
+    'customerRef',
+    'confidence',
+    'needsClarification',
+    'clarificationQuestion',
+  ],
+  properties: {
+    intent: { type: 'string', enum: ['pos', 'kasbon', 'query', 'unknown'] },
+    transactionType: {
+      anyOf: [{ type: 'string', enum: ['sale', 'stock_in', 'expense'] }, { type: 'null' }],
+    },
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['rawName', 'qty', 'unit', 'unitPrice', 'action'],
+        properties: {
+          rawName: { type: 'string' },
+          qty: { type: 'number' },
+          unit: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          unitPrice: { anyOf: [{ type: 'integer' }, { type: 'null' }] },
+          action: { type: 'string', enum: ['sale', 'stock_in'] },
+        },
+      },
+    },
+    customerRef: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+    confidence: { type: 'number', minimum: 0, maximum: 1 },
+    needsClarification: { type: 'boolean' },
+    clarificationQuestion: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+  },
+};
+
+async function callGemini({ text, catalog, fallback = false }) {
+  const pass = fallback ? 'fallback' : 'primary';
+
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const response = await getGeminiClient().models.generateContent({
+        model: config.gcp.geminiModel,
+        contents: buildGeminiContents({ text, catalog, fallback }),
+        config: {
+          responseMimeType: 'application/json',
+          responseJsonSchema,
+        },
+      });
+      const rawText = response.text;
+
+      if (!rawText) {
+        throw new Error('Gemini extraction returned empty response');
+      }
+
+      return normalizeExtraction(JSON.parse(rawText));
+    } catch (error) {
+      if (isRateLimitError(error) && attempt < GEMINI_MAX_RETRIES) {
+        const delayMs = GEMINI_RETRY_BASE_MS * 2 ** attempt;
+        logger.warn(
+          { pass, attempt: attempt + 1, delayMs },
+          'Gemini extraction rate-limited; retrying',
+        );
+        await sleep(delayMs);
+        continue;
+      }
+
+      throw error;
+    }
+  }
+}
+
+export async function extractEntities({ text, shop, preferGemini = true }) {
+  if (!preferGemini || !hasUsableGeminiKey()) {
+    return localExtract(text);
+  }
+
+  const catalog = await getCatalogContext(shop);
+
+  try {
+    const primary = await callGemini({ text, catalog });
+
+    if (
+      !primary.needsClarification &&
+      primary.items.length > 0 &&
+      primary.confidence >= config.limits.extractionConfidenceThreshold
+    ) {
+      return primary;
+    }
+
+    return await callGemini({ text, catalog, fallback: true });
+  } catch (error) {
+    logger.warn(
+      { err: error, rateLimited: isRateLimitError(error), textPreview: String(text ?? '').slice(0, 60) },
+      'Gemini extraction failed; degrading to local fallback parser',
+    );
+    return localExtract(text);
+  }
+}
+
+export const extractorInternals = {
+  localExtract,
+};

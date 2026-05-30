@@ -11,6 +11,7 @@ process.env.WHATSAPP_GRAPH_API_VERSION = 'v21.0';
 process.env.GOOGLE_APPLICATION_CREDENTIALS = './secrets/test-gcp-service-account.json';
 process.env.GCP_PROJECT_ID = 'warungai-test';
 process.env.GCP_LOCATION = 'us-central1';
+process.env.GEMINI_API_KEY = 'test-gemini-key';
 process.env.GEMINI_MODEL = 'gemini-2.5-flash';
 process.env.FREE_TIER_DAILY_TXN_CAP = '50';
 process.env.KOIN_BOT_ENABLED = 'true';

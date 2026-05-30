@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const findOrCreateByOwnerPhoneMock = vi.hoisted(() => vi.fn());
 const getOrCreateSessionMock = vi.hoisted(() => vi.fn());
+const handleTextPosMock = vi.hoisted(() => vi.fn());
+const confirmPendingTransactionMock = vi.hoisted(() => vi.fn());
 const sendTextMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/services/shopService.js', () => ({
@@ -10,6 +12,11 @@ vi.mock('../src/services/shopService.js', () => ({
 
 vi.mock('../src/services/sessionService.js', () => ({
   getOrCreateSession: getOrCreateSessionMock,
+}));
+
+vi.mock('../src/services/posService.js', () => ({
+  handleTextPos: handleTextPosMock,
+  confirmPendingTransaction: confirmPendingTransactionMock,
 }));
 
 vi.mock('../src/messaging/whatsapp.js', () => ({
@@ -24,7 +31,9 @@ describe('routeInboundMessage', () => {
       shop: { _id: 'shop-1' },
       created: false,
     });
-    getOrCreateSessionMock.mockResolvedValue({ _id: 'session-1' });
+    getOrCreateSessionMock.mockResolvedValue({ _id: 'session-1', state: 'idle' });
+    handleTextPosMock.mockResolvedValue({ action: 'pending_confirmation' });
+    confirmPendingTransactionMock.mockResolvedValue({ action: 'committed' });
     sendTextMock.mockResolvedValue({ messages: [{ id: 'sent-1' }] });
   });
 
@@ -60,14 +69,39 @@ describe('routeInboundMessage', () => {
     expect(result).toEqual({ handled: true, action: 'onboarded', shopId: 'shop-1' });
   });
 
-  it('echoes existing text senders until POS routing lands in Phase 3', async () => {
-    await routeInboundMessage({
+  it('routes existing idle text senders to the POS handler', async () => {
+    const message = {
       from: '+6281234567890',
       profileName: 'Bu Sri',
       type: 'text',
       text: 'cek',
-    });
+    };
 
-    expect(sendTextMock).toHaveBeenCalledWith('+6281234567890', 'Anda menulis: cek');
+    await routeInboundMessage(message);
+
+    expect(handleTextPosMock).toHaveBeenCalledWith({
+      shop: { _id: 'shop-1' },
+      session: { _id: 'session-1', state: 'idle' },
+      message,
+    });
+  });
+
+  it('routes awaiting-confirmation text replies to the confirmation handler', async () => {
+    const session = { _id: 'session-1', state: 'awaiting_confirmation' };
+    getOrCreateSessionMock.mockResolvedValue(session);
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: 'Y',
+    };
+
+    await routeInboundMessage(message);
+
+    expect(confirmPendingTransactionMock).toHaveBeenCalledWith({
+      shop: { _id: 'shop-1' },
+      session,
+      message,
+    });
   });
 });

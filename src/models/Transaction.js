@@ -4,8 +4,10 @@ const transactionItemSchema = new mongoose.Schema(
   {
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
     name: { type: String, required: true, trim: true },
+    rawName: { type: String, trim: true },
     qty: { type: Number, required: true },
     unit: { type: String, trim: true },
+    action: { type: String, enum: ['sale', 'stock_in'], required: true },
     unitPrice: Number,
     lineTotal: Number,
   },
