@@ -2,7 +2,12 @@ import express from 'express';
 import pinoHttp from 'pino-http';
 import { randomUUID } from 'node:crypto';
 
+import { getDbStatus } from './config/db.js';
 import { logger } from './utils/logger.js';
+
+function captureRawBody(req, _res, buffer) {
+  req.rawBody = buffer;
+}
 
 export function createApp() {
   const app = express();
@@ -25,10 +30,10 @@ export function createApp() {
     }),
   );
 
-  app.use(express.json());
+  app.use(express.json({ verify: captureRawBody }));
 
   app.get('/health', (_req, res) => {
-    res.status(200).json({ status: 'ok' });
+    res.status(200).json({ status: 'ok', db: getDbStatus() });
   });
 
   return app;

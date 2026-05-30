@@ -4,7 +4,6 @@ import { connectDb, registerDbShutdownHandlers } from './src/config/db.js';
 import { logger } from './src/utils/logger.js';
 
 async function start() {
-  await connectDb();
   registerDbShutdownHandlers();
 
   const server = app.listen(config.port, () => {
@@ -15,6 +14,15 @@ async function start() {
     logger.error({ err: error }, 'HTTP server failed');
     process.exit(1);
   });
+
+  try {
+    await connectDb();
+  } catch (error) {
+    logger.error({ err: error }, 'Startup failed');
+    server.close(() => {
+      process.exit(1);
+    });
+  }
 }
 
 start().catch((error) => {

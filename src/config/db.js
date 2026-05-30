@@ -6,7 +6,18 @@ import { logger } from '../utils/logger.js';
 const DEFAULT_MAX_RETRIES = 5;
 const DEFAULT_RETRY_DELAY_MS = 1000;
 
+const CONNECTION_STATES = {
+  0: 'disconnected',
+  1: 'connected',
+  2: 'connecting',
+  3: 'disconnecting',
+};
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export function getDbStatus() {
+  return CONNECTION_STATES[mongoose.connection.readyState] ?? 'unknown';
+}
 
 export async function connectDb({
   uri = config.mongo.uri,
