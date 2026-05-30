@@ -27,6 +27,7 @@ const envSchema = z.object({
   FREE_TIER_DAILY_TXN_CAP: z.coerce.number().int().positive().default(50),
   KOIN_BOT_ENABLED: booleanFromEnv.default(true),
   EXTRACTION_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.6),
+  SESSION_TTL_MINUTES: z.coerce.number().int().positive().default(60),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -65,5 +66,6 @@ export const config = {
     freeTierDailyTxnCap: parsedEnv.data.FREE_TIER_DAILY_TXN_CAP,
     koinBotEnabled: parsedEnv.data.KOIN_BOT_ENABLED,
     extractionConfidenceThreshold: parsedEnv.data.EXTRACTION_CONFIDENCE_THRESHOLD,
+    sessionTtlMinutes: parsedEnv.data.SESSION_TTL_MINUTES,
   },
 };

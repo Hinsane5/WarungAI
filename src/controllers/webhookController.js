@@ -1,6 +1,6 @@
 import { config } from '../config/index.js';
+import { routeInboundMessage } from '../intents/router.js';
 import { normalizeInboundMessages } from '../messaging/normalize.js';
-import { sendText } from '../messaging/whatsapp.js';
 import { hasProcessedMessage, markMessageProcessed } from '../services/messageDedupeService.js';
 import { logger } from '../utils/logger.js';
 
@@ -37,15 +37,6 @@ export async function processWebhookPayload(payload, correlationId) {
     }
 
     markMessageProcessed(message.messageId);
-    await handleEchoMessage(message);
+    await routeInboundMessage(message);
   }
-}
-
-async function handleEchoMessage(message) {
-  if (message.type !== 'text' || !message.text) {
-    await sendText(message.from, 'Untuk saat ini, kirim pesan teks dulu ya.');
-    return;
-  }
-
-  await sendText(message.from, `Anda menulis: ${message.text}`);
 }

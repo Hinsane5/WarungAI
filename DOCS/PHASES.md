@@ -19,7 +19,7 @@
 |-------|------|--------|
 | 0 | Project foundation | ✅ done |
 | 1 | WhatsApp echo loop | 🟡 in progress |
-| 2 | Data layer + onboarding | ⬜ |
+| 2 | Data layer + onboarding | 🟡 in progress |
 | 3 | Conversational POS (text) + confirmation | ⬜ |
 | 4 | Voice notes (STT) | ⬜ |
 | 5 | Smart Kasbon + credit scoring | ⬜ |

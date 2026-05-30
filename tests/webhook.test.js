@@ -3,6 +3,12 @@ import { readFileSync } from 'node:fs';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const routeInboundMessageMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../src/intents/router.js', () => ({
+  routeInboundMessage: routeInboundMessageMock,
+}));
+
 import { app } from '../src/app.js';
 import { resetMessageDedupeStore } from '../src/services/messageDedupeService.js';
 
@@ -51,6 +57,7 @@ async function waitForExpectation(assertion) {
 describe('/webhook', () => {
   beforeEach(() => {
     resetMessageDedupeStore();
+    routeInboundMessageMock.mockResolvedValue({ handled: true, action: 'test' });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(createFetchResponse()));
   });
 
@@ -91,7 +98,7 @@ describe('/webhook', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('acknowledges a valid text message and sends an echo reply', async () => {
+  it('acknowledges a valid text message and routes it asynchronously', async () => {
     const rawBody = JSON.stringify(textMessageFixture);
 
     await request(app)
@@ -102,15 +109,15 @@ describe('/webhook', () => {
       .expect(200);
 
     await waitForExpectation(() => {
-      expect(fetch).toHaveBeenCalledTimes(1);
-    });
-
-    const [, requestInit] = fetch.mock.calls[0];
-    expect(JSON.parse(requestInit.body)).toMatchObject({
-      messaging_product: 'whatsapp',
-      to: '6281234567890',
-      type: 'text',
-      text: { body: 'Anda menulis: halo warungai' },
+      expect(routeInboundMessageMock).toHaveBeenCalledWith({
+        from: '+6281234567890',
+        messageId: 'wamid.test-1',
+        type: 'text',
+        text: 'halo warungai',
+        audioMediaId: null,
+        profileName: 'Bu Sri',
+        timestamp: new Date(1780121282 * 1000),
+      });
     });
   });
 
@@ -133,12 +140,12 @@ describe('/webhook', () => {
       .expect(200);
 
     await waitForExpectation(() => {
-      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(routeInboundMessageMock).toHaveBeenCalledTimes(1);
     });
   });
 
   it('still returns 200 when async message handling fails', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('send failed')));
+    routeInboundMessageMock.mockRejectedValue(new Error('routing failed'));
     const rawBody = JSON.stringify(textMessageFixture);
 
     await request(app)
@@ -149,7 +156,7 @@ describe('/webhook', () => {
       .expect(200);
 
     await waitForExpectation(() => {
-      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(routeInboundMessageMock).toHaveBeenCalledTimes(1);
     });
   });
 });
