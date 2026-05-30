@@ -218,6 +218,8 @@
 
 **Goal:** F5 — owner web dashboard + Premium Excel export.
 
+> **Follow [`DASHBOARD_UI_GUIDE.md`](./DASHBOARD_UI_GUIDE.md)** for the visual spec, design tokens, component/chart styling, data contracts, and the 8a–8f build sub-phases. It is the authority on how the dashboard looks and is wired.
+
 **Tasks**
 1. MongoDB aggregation queries: stock levels, cash flow, top items, outstanding kasbon.
 2. `web/dashboard/` (Bootstrap) rendering the metrics; simple auth (owner phone link/OTP or signed link).
