@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*-service-account.json
+gcp-*.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build / coverage
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Runtime / cache
+.cache/
+.tmp/
+tmp/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
