@@ -3,6 +3,7 @@ import { sendText } from '../messaging/whatsapp.js';
 import { Customer } from '../models/Customer.js';
 import { Shop } from '../models/Shop.js';
 import { Transaction } from '../models/Transaction.js';
+import { logger } from '../utils/logger.js';
 import { normalizePhone } from '../utils/phone.js';
 
 const RECENT_TRANSACTION_WINDOW_MS = 30 * 60 * 1000;
@@ -145,7 +146,19 @@ export async function registerLoyaltyCustomer({ slug, phone, name, now = new Dat
     now,
   });
 
-  await sendText(normalizedPhone, formatStampMessage({ shop, customer }));
+  try {
+    await sendText(normalizedPhone, formatStampMessage({ shop, customer }));
+  } catch (error) {
+    logger.warn(
+      {
+        err: error,
+        shopId: shop._id,
+        customerId: customer._id,
+        phone: normalizedPhone,
+      },
+      'Loyalty stamp confirmation send failed',
+    );
+  }
 
   return {
     ok: true,

@@ -72,6 +72,30 @@ describe('loyalty routes', () => {
     });
   });
 
+  it('returns success when registration completed even if stamp delivery was skipped upstream', async () => {
+    registerLoyaltyCustomerMock.mockResolvedValueOnce({
+      ok: true,
+      shop: { name: 'Warung Sri' },
+      customer: {
+        loyalty: { stamps: 2, points: 2 },
+      },
+    });
+
+    await request(app)
+      .post('/api/loyalty/register')
+      .send({
+        slug: 'warung-static-slug',
+        phone: '08111222333',
+        name: 'Budi',
+      })
+      .expect(200, {
+        ok: true,
+        shopName: 'Warung Sri',
+        stamps: 2,
+        points: 2,
+      });
+  });
+
   it('maps registration validation failures to HTTP responses', async () => {
     registerLoyaltyCustomerMock.mockResolvedValueOnce({ ok: false, reason: 'invalid_phone' });
 

@@ -164,6 +164,26 @@ describe('loyaltyService', () => {
     expect(result.customer).toBe(customer);
   });
 
+  it('keeps registration successful when WhatsApp stamp confirmation fails', async () => {
+    const customer = createCustomer({ loyalty: { points: 1, stamps: 1, joinedVia: 'qr' } });
+    customerCreateMock.mockResolvedValue(customer);
+    sendTextMock.mockRejectedValue(new Error('Meta send failed'));
+
+    const result = await registerLoyaltyCustomer({
+      slug: 'warung-static-slug',
+      phone: '08111222333',
+      name: 'Budi',
+    });
+
+    expect(customerCreateMock).toHaveBeenCalledTimes(1);
+    expect(sendTextMock).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      ok: true,
+      customer,
+      linkedTransaction: null,
+    });
+  });
+
   it('rejects unknown slugs and invalid phone numbers', async () => {
     shopFindOneMock.mockResolvedValueOnce(null);
 
