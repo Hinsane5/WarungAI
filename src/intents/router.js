@@ -1,6 +1,12 @@
 import { transcribeOggOpus } from '../ai/sttClient.js';
 import { downloadMedia } from '../messaging/media.js';
 import { sendText } from '../messaging/whatsapp.js';
+import {
+  approveKasbonReminder,
+  draftKasbonReminder,
+  handleKasbon,
+  parseReminderCommand,
+} from '../services/kasbonService.js';
 import { confirmPendingTransaction, handleTextPos } from '../services/posService.js';
 import { findOrCreateByOwnerPhone } from '../services/shopService.js';
 import { getOrCreateSession } from '../services/sessionService.js';
@@ -86,6 +92,18 @@ export async function routeInboundMessage(message) {
 
   if (session.state === 'awaiting_confirmation') {
     return confirmPendingTransaction({ shop, session, message });
+  }
+
+  if (session.state === 'awaiting_kasbon_reminder_approval') {
+    return approveKasbonReminder({ shop, session, message });
+  }
+
+  if (/^\s*kasbon\b/iu.test(message.text)) {
+    return handleKasbon({ shop, session, message });
+  }
+
+  if (parseReminderCommand(message.text)) {
+    return draftKasbonReminder({ shop, session, message });
   }
 
   if (session.state === 'fast_text_fallback') {

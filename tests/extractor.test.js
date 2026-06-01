@@ -50,6 +50,29 @@ describe('extractEntities', () => {
     expect(result.clarificationQuestion).toContain('Transaksinya apa');
   });
 
+  it('parses a simple kasbon command with customer reference', async () => {
+    const result = await extractEntities({
+      text: 'kasbon budi 2 rokok',
+      preferGemini: false,
+    });
+
+    expect(result).toMatchObject({
+      intent: 'kasbon',
+      customerRef: 'budi',
+      transactionType: 'sale',
+      needsClarification: false,
+    });
+    expect(result.items).toEqual([
+      {
+        rawName: 'rokok',
+        qty: 2,
+        unit: null,
+        unitPrice: null,
+        action: 'sale',
+      },
+    ]);
+  });
+
   it('passes the fixture eval set with the local fallback parser', async () => {
     for (const fixture of extractionFixtures) {
       const result = await extractEntities({ text: fixture.input, preferGemini: false });

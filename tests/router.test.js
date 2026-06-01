@@ -4,6 +4,10 @@ const findOrCreateByOwnerPhoneMock = vi.hoisted(() => vi.fn());
 const getOrCreateSessionMock = vi.hoisted(() => vi.fn());
 const handleTextPosMock = vi.hoisted(() => vi.fn());
 const confirmPendingTransactionMock = vi.hoisted(() => vi.fn());
+const handleKasbonMock = vi.hoisted(() => vi.fn());
+const draftKasbonReminderMock = vi.hoisted(() => vi.fn());
+const approveKasbonReminderMock = vi.hoisted(() => vi.fn());
+const parseReminderCommandMock = vi.hoisted(() => vi.fn());
 const downloadMediaMock = vi.hoisted(() => vi.fn());
 const transcribeOggOpusMock = vi.hoisted(() => vi.fn());
 const sendTextMock = vi.hoisted(() => vi.fn());
@@ -19,6 +23,13 @@ vi.mock('../src/services/sessionService.js', () => ({
 vi.mock('../src/services/posService.js', () => ({
   handleTextPos: handleTextPosMock,
   confirmPendingTransaction: confirmPendingTransactionMock,
+}));
+
+vi.mock('../src/services/kasbonService.js', () => ({
+  handleKasbon: handleKasbonMock,
+  draftKasbonReminder: draftKasbonReminderMock,
+  approveKasbonReminder: approveKasbonReminderMock,
+  parseReminderCommand: parseReminderCommandMock,
 }));
 
 vi.mock('../src/messaging/media.js', () => ({
@@ -44,6 +55,10 @@ describe('routeInboundMessage', () => {
     getOrCreateSessionMock.mockResolvedValue({ _id: 'session-1', state: 'idle' });
     handleTextPosMock.mockResolvedValue({ action: 'pending_confirmation' });
     confirmPendingTransactionMock.mockResolvedValue({ action: 'committed' });
+    handleKasbonMock.mockResolvedValue({ action: 'kasbon_recorded' });
+    draftKasbonReminderMock.mockResolvedValue({ action: 'kasbon_reminder_drafted' });
+    approveKasbonReminderMock.mockResolvedValue({ action: 'kasbon_reminder_sent' });
+    parseReminderCommandMock.mockReturnValue(null);
     downloadMediaMock.mockResolvedValue(Buffer.from('ogg-opus'));
     transcribeOggOpusMock.mockResolvedValue({
       transcript: 'laku 2 indomie 3000',
@@ -118,6 +133,63 @@ describe('routeInboundMessage', () => {
       session,
       message,
     });
+  });
+
+  it('routes kasbon commands to the kasbon handler', async () => {
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: 'kasbon budi 2 rokok',
+    };
+
+    await routeInboundMessage(message);
+
+    expect(handleKasbonMock).toHaveBeenCalledWith({
+      shop: { _id: 'shop-1' },
+      session: { _id: 'session-1', state: 'idle' },
+      message,
+    });
+    expect(handleTextPosMock).not.toHaveBeenCalled();
+  });
+
+  it('routes reminder approval replies before normal text handling', async () => {
+    const session = { _id: 'session-1', state: 'awaiting_kasbon_reminder_approval' };
+    getOrCreateSessionMock.mockResolvedValue(session);
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: 'KIRIM',
+    };
+
+    await routeInboundMessage(message);
+
+    expect(approveKasbonReminderMock).toHaveBeenCalledWith({
+      shop: { _id: 'shop-1' },
+      session,
+      message,
+    });
+    expect(handleTextPosMock).not.toHaveBeenCalled();
+  });
+
+  it('routes reminder draft commands to kasbon reminder drafting', async () => {
+    parseReminderCommandMock.mockReturnValue('budi');
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: 'tagih budi',
+    };
+
+    await routeInboundMessage(message);
+
+    expect(draftKasbonReminderMock).toHaveBeenCalledWith({
+      shop: { _id: 'shop-1' },
+      session: { _id: 'session-1', state: 'idle' },
+      message,
+    });
+    expect(handleTextPosMock).not.toHaveBeenCalled();
   });
 
   it('transcribes audio messages and routes the transcript through POS', async () => {

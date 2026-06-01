@@ -14,7 +14,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function isRateLimitError(error) {
   const status = error?.status ?? error?.code;
   const message = String(error?.message ?? '');
-  return status === 429 || /\b429\b|RESOURCE_EXHAUSTED|rate limit|quota|too many requests/i.test(message);
+  return (
+    status === 429 || /\b429\b|RESOURCE_EXHAUSTED|rate limit|quota|too many requests/i.test(message)
+  );
 }
 
 const EXTRACT_PROMPT = readFileSync(new URL('./prompts/extract.v1.md', import.meta.url), 'utf8');
@@ -27,6 +29,8 @@ const SEGMENT_SPLIT_PATTERN = /\s*(?:,| dan | sama | terus | lalu )\s*/giu;
 const KNOWN_UNITS = new Set(['pcs', 'pc', 'dus', 'box', 'karton', 'galon', 'kg', 'gram', 'gr']);
 const ITEM_PATTERN =
   /(?<qty>\d+(?:[.,]\d+)?)\s*(?<unit>[a-zA-Z]+)?\s+(?<name>.+?)(?:\s+(?:rp)?(?<price>\d[\d.]*)\s*)?$/iu;
+const KASBON_PATTERN =
+  /^\s*kasbon\s+(?<customerRef>[^\d]+?)\s+(?<itemText>\d+(?:[.,]\d+)?\s*.*)$/iu;
 
 let geminiClient;
 
@@ -111,6 +115,44 @@ function inferTransactionType(items) {
   return null;
 }
 
+function parseKasbon(text) {
+  const match = text.match(KASBON_PATTERN);
+
+  if (!match?.groups) {
+    return null;
+  }
+
+  const itemMatch = match.groups.itemText.trim().match(ITEM_PATTERN);
+
+  if (!itemMatch?.groups) {
+    return null;
+  }
+
+  const possibleUnit = itemMatch.groups.unit?.toLowerCase() ?? null;
+  const unit = possibleUnit && KNOWN_UNITS.has(possibleUnit) ? itemMatch.groups.unit : null;
+  const rawNameSource = unit
+    ? itemMatch.groups.name
+    : `${itemMatch.groups.unit ?? ''} ${itemMatch.groups.name}`;
+  const rawName = rawNameSource.replace(/\s+rp?\d[\d.]*$/iu, '').trim();
+
+  if (!rawName) {
+    return null;
+  }
+
+  return {
+    customerRef: match.groups.customerRef.trim(),
+    items: [
+      {
+        rawName,
+        qty: parseNumber(itemMatch.groups.qty),
+        unit,
+        unitPrice: parseNumber(itemMatch.groups.price),
+        action: 'sale',
+      },
+    ],
+  };
+}
+
 function normalizeExtraction(result) {
   const parsed = extractionResultSchema.parse(result);
 
@@ -128,6 +170,20 @@ function normalizeExtraction(result) {
 }
 
 function localExtract(text) {
+  const kasbon = parseKasbon(text);
+
+  if (kasbon) {
+    return normalizeExtraction({
+      intent: 'kasbon',
+      transactionType: 'sale',
+      items: kasbon.items,
+      customerRef: kasbon.customerRef,
+      confidence: 0.82,
+      needsClarification: false,
+      clarificationQuestion: null,
+    });
+  }
+
   const items = parseItems(text);
 
   const result = {
@@ -279,7 +335,11 @@ export async function extractEntities({ text, shop, preferGemini = true }) {
     return await callGemini({ text, catalog, fallback: true });
   } catch (error) {
     logger.warn(
-      { err: error, rateLimited: isRateLimitError(error), textPreview: String(text ?? '').slice(0, 60) },
+      {
+        err: error,
+        rateLimited: isRateLimitError(error),
+        textPreview: String(text ?? '').slice(0, 60),
+      },
       'Gemini extraction failed; degrading to local fallback parser',
     );
     return localExtract(text);
