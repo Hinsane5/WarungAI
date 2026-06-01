@@ -17,3 +17,4 @@ process.env.FREE_TIER_DAILY_TXN_CAP = '50';
 process.env.KOIN_BOT_ENABLED = 'true';
 process.env.EXTRACTION_CONFIDENCE_THRESHOLD = '0.6';
 process.env.SESSION_TTL_MINUTES = '60';
+process.env.STT_LOW_CONFIDENCE_THRESHOLD = '0.75';

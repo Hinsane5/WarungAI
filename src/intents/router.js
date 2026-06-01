@@ -1,7 +1,10 @@
+import { transcribeOggOpus } from '../ai/sttClient.js';
+import { downloadMedia } from '../messaging/media.js';
 import { sendText } from '../messaging/whatsapp.js';
 import { confirmPendingTransaction, handleTextPos } from '../services/posService.js';
 import { findOrCreateByOwnerPhone } from '../services/shopService.js';
 import { getOrCreateSession } from '../services/sessionService.js';
+import { logger } from '../utils/logger.js';
 
 const WELCOME_MESSAGE = [
   'Selamat datang di WarungAI.',
@@ -9,6 +12,56 @@ const WELCOME_MESSAGE = [
   'Untuk mulai, kirim transaksi seperti: "masuk 2 dus indomie" atau "laku 1 galon aqua".',
   'Nanti setiap transaksi akan minta konfirmasi Y/T sebelum masuk buku.',
 ].join('\n');
+
+async function handleAudioMessage({ shop, session, message }) {
+  if (!message.audioMediaId) {
+    await sendText(
+      message.from,
+      'Voice note tidak terbaca. Tolong kirim ulang atau ketik transaksinya.',
+    );
+    return { handled: true, action: 'audio_missing_media_id' };
+  }
+
+  let transcription;
+
+  try {
+    const audioBuffer = await downloadMedia(message.audioMediaId);
+    transcription = await transcribeOggOpus(audioBuffer);
+  } catch (error) {
+    logger.warn(
+      {
+        err: error,
+        messageId: message.messageId,
+        audioMediaId: message.audioMediaId,
+        from: message.from,
+      },
+      'Voice note media download or STT transcription failed',
+    );
+    await sendText(
+      message.from,
+      'Voice note belum bisa diproses. Tolong kirim ulang atau ketik transaksinya.',
+    );
+    return { handled: true, action: 'audio_transcription_failed' };
+  }
+
+  if (!transcription.transcript) {
+    await sendText(
+      message.from,
+      'Voice note belum bisa ditranskrip. Tolong kirim ulang lebih jelas atau ketik transaksinya.',
+    );
+    return { handled: true, action: 'audio_empty_transcript' };
+  }
+
+  return handleTextPos({
+    shop,
+    session,
+    message: {
+      ...message,
+      text: transcription.transcript,
+      sttConfidence: transcription.confidence,
+    },
+  });
+}
 
 export async function routeInboundMessage(message) {
   const { shop, created } = await findOrCreateByOwnerPhone({
@@ -20,6 +73,10 @@ export async function routeInboundMessage(message) {
   if (created) {
     await sendText(message.from, WELCOME_MESSAGE);
     return { handled: true, action: 'onboarded', shopId: shop._id };
+  }
+
+  if (message.type === 'audio') {
+    return handleAudioMessage({ shop, session, message });
   }
 
   if (message.type !== 'text' || !message.text) {

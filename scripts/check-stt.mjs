@@ -1,6 +1,7 @@
 // Verify GCP Speech-to-Text is set up correctly: credentials + API enabled + billing.
-// Run AFTER you place the service-account key at ./secrets/gcp-service-account.json
-// and set a real GCP_PROJECT_ID in .env.
+// Run AFTER you authenticate with ADC (`gcloud auth application-default login`) or
+// set GOOGLE_APPLICATION_CREDENTIALS to a service-account key path.
+// Also set a real GCP_PROJECT_ID in .env.
 //
 // Usage:  node scripts/check-stt.mjs
 //
@@ -18,7 +19,10 @@ try {
   });
 
   const transcript =
-    response.results?.map((r) => r.alternatives?.[0]?.transcript ?? '').join(' ').trim() || '(empty)';
+    response.results
+      ?.map((r) => r.alternatives?.[0]?.transcript ?? '')
+      .join(' ')
+      .trim() || '(empty)';
 
   console.log('✓ Speech-to-Text is working.');
   console.log(`  Sample transcript: "${transcript}"`);
@@ -27,7 +31,9 @@ try {
   console.error('  Common causes:');
   console.error('   - Cloud Speech-to-Text API not enabled on the project');
   console.error('   - Billing not linked to the project');
-  console.error('   - Key file missing/wrong at GOOGLE_APPLICATION_CREDENTIALS');
+  console.error(
+    '   - ADC not configured, or GOOGLE_APPLICATION_CREDENTIALS points to a bad key file',
+  );
   console.error('   - GCP_PROJECT_ID still "replace-me"');
   process.exitCode = 1;
 } finally {

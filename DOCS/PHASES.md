@@ -21,7 +21,7 @@
 | 1 | WhatsApp echo loop | 🟡 in progress |
 | 2 | Data layer + onboarding | 🟡 in progress |
 | 3 | Conversational POS (text) + confirmation | 🟡 in progress |
-| 4 | Voice notes (STT) | ⬜ |
+| 4 | Voice notes (STT) | 🟡 |
 | 5 | Smart Kasbon + credit scoring | ⬜ |
 | 6 | Frictionless loyalty capture | ⬜ |
 | 7 | Proactive CRM + predictive restock (batch) | ⬜ |

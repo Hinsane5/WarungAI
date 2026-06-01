@@ -19,7 +19,7 @@ const envSchema = z.object({
   WHATSAPP_APP_SECRET: z.string().min(1),
   WHATSAPP_GRAPH_API_VERSION: z.string().min(1).default('v21.0'),
 
-  GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1),
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().optional().default(''),
   GCP_PROJECT_ID: z.string().min(1),
   GCP_LOCATION: z.string().min(1).default('us-central1'),
   GEMINI_API_KEY: z.string().min(1),
@@ -29,6 +29,7 @@ const envSchema = z.object({
   KOIN_BOT_ENABLED: booleanFromEnv.default(true),
   EXTRACTION_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.6),
   SESSION_TTL_MINUTES: z.coerce.number().int().positive().default(60),
+  STT_LOW_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.75),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -58,7 +59,7 @@ export const config = {
     graphApiVersion: parsedEnv.data.WHATSAPP_GRAPH_API_VERSION,
   },
   gcp: {
-    credentialsPath: parsedEnv.data.GOOGLE_APPLICATION_CREDENTIALS,
+    credentialsPath: parsedEnv.data.GOOGLE_APPLICATION_CREDENTIALS || null,
     projectId: parsedEnv.data.GCP_PROJECT_ID,
     location: parsedEnv.data.GCP_LOCATION,
     geminiApiKey: parsedEnv.data.GEMINI_API_KEY,
@@ -69,5 +70,6 @@ export const config = {
     koinBotEnabled: parsedEnv.data.KOIN_BOT_ENABLED,
     extractionConfidenceThreshold: parsedEnv.data.EXTRACTION_CONFIDENCE_THRESHOLD,
     sessionTtlMinutes: parsedEnv.data.SESSION_TTL_MINUTES,
+    sttLowConfidenceThreshold: parsedEnv.data.STT_LOW_CONFIDENCE_THRESHOLD,
   },
 };

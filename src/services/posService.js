@@ -86,8 +86,14 @@ function formatConfirmation(transaction) {
       return `${formatQty(item)} ${item.name} (${actionLabel(item.action)}${priceText})`;
     })
     .join(', ');
+  const confidencePrefix =
+    transaction.source === 'voice' &&
+    transaction.sttConfidence != null &&
+    transaction.sttConfidence < config.limits.sttLowConfidenceThreshold
+      ? 'Aku kurang yakin dengan transkrip voice note. '
+      : '';
 
-  return `Tercatat: ${summary}. Benar? Balas Y / T`;
+  return `${confidencePrefix}Tercatat: ${summary}. Benar? Balas Y / T`;
 }
 
 async function buildPendingItems(shopId, extractedItems, options = {}) {
@@ -155,6 +161,7 @@ export async function handleTextPos({ shop, session, message }) {
     source: message.type === 'audio' ? 'voice' : 'text',
     rawMessage: message.text,
     whatsappMessageId: message.messageId,
+    sttConfidence: message.sttConfidence,
     extractionConfidence: extraction.confidence,
     items,
     totalAmount: items.reduce((total, item) => total + item.lineTotal, 0),

@@ -191,6 +191,48 @@ describe('posService', () => {
     expect(result.action).toBe('clarifying_missing_price');
   });
 
+  it('persists voice source confidence and flags low-confidence STT in confirmation', async () => {
+    const product = createProduct({ _id: 'product-1', name: 'Indomie Goreng', sellPrice: 3000 });
+    resolveProductMock.mockResolvedValue({ product, rawName: 'indomie', created: false });
+    extractEntitiesMock.mockResolvedValue({
+      intent: 'pos',
+      items: [{ rawName: 'indomie', qty: 2, unit: 'pcs', unitPrice: null, action: 'sale' }],
+      confidence: 0.88,
+      needsClarification: false,
+    });
+    transactionCreateMock.mockImplementation(async (payload) => ({
+      _id: 'txn-voice',
+      ...payload,
+    }));
+    const session = createSession();
+
+    const result = await handleTextPos({
+      shop: createShop(),
+      session,
+      message: {
+        from: '+6281234567890',
+        type: 'audio',
+        text: 'laku 2 indomie',
+        messageId: 'wamid-voice',
+        sttConfidence: 0.55,
+      },
+    });
+
+    expect(transactionCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'voice',
+        rawMessage: 'laku 2 indomie',
+        whatsappMessageId: 'wamid-voice',
+        sttConfidence: 0.55,
+      }),
+    );
+    expect(sendTextMock).toHaveBeenCalledWith(
+      '+6281234567890',
+      expect.stringContaining('Aku kurang yakin dengan transkrip voice note'),
+    );
+    expect(result.action).toBe('pending_confirmation');
+  });
+
   it('commits a pending transaction on Y and updates product stock plus cash delta', async () => {
     const product = createProduct({ _id: 'product-1', stock: 5 });
     const transaction = {

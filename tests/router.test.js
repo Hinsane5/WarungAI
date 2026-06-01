@@ -4,6 +4,8 @@ const findOrCreateByOwnerPhoneMock = vi.hoisted(() => vi.fn());
 const getOrCreateSessionMock = vi.hoisted(() => vi.fn());
 const handleTextPosMock = vi.hoisted(() => vi.fn());
 const confirmPendingTransactionMock = vi.hoisted(() => vi.fn());
+const downloadMediaMock = vi.hoisted(() => vi.fn());
+const transcribeOggOpusMock = vi.hoisted(() => vi.fn());
 const sendTextMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/services/shopService.js', () => ({
@@ -17,6 +19,14 @@ vi.mock('../src/services/sessionService.js', () => ({
 vi.mock('../src/services/posService.js', () => ({
   handleTextPos: handleTextPosMock,
   confirmPendingTransaction: confirmPendingTransactionMock,
+}));
+
+vi.mock('../src/messaging/media.js', () => ({
+  downloadMedia: downloadMediaMock,
+}));
+
+vi.mock('../src/ai/sttClient.js', () => ({
+  transcribeOggOpus: transcribeOggOpusMock,
 }));
 
 vi.mock('../src/messaging/whatsapp.js', () => ({
@@ -34,6 +44,11 @@ describe('routeInboundMessage', () => {
     getOrCreateSessionMock.mockResolvedValue({ _id: 'session-1', state: 'idle' });
     handleTextPosMock.mockResolvedValue({ action: 'pending_confirmation' });
     confirmPendingTransactionMock.mockResolvedValue({ action: 'committed' });
+    downloadMediaMock.mockResolvedValue(Buffer.from('ogg-opus'));
+    transcribeOggOpusMock.mockResolvedValue({
+      transcript: 'laku 2 indomie 3000',
+      confidence: 0.82,
+    });
     sendTextMock.mockResolvedValue({ messages: [{ id: 'sent-1' }] });
   });
 
@@ -103,5 +118,50 @@ describe('routeInboundMessage', () => {
       session,
       message,
     });
+  });
+
+  it('transcribes audio messages and routes the transcript through POS', async () => {
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      messageId: 'wamid-audio',
+      type: 'audio',
+      audioMediaId: 'media-1',
+      text: '',
+    };
+
+    await routeInboundMessage(message);
+
+    expect(downloadMediaMock).toHaveBeenCalledWith('media-1');
+    expect(transcribeOggOpusMock).toHaveBeenCalledWith(Buffer.from('ogg-opus'));
+    expect(handleTextPosMock).toHaveBeenCalledWith({
+      shop: { _id: 'shop-1' },
+      session: { _id: 'session-1', state: 'idle' },
+      message: {
+        ...message,
+        text: 'laku 2 indomie 3000',
+        sttConfidence: 0.82,
+      },
+    });
+  });
+
+  it('asks the sender to retry when audio processing fails', async () => {
+    downloadMediaMock.mockRejectedValue(new Error('media download failed'));
+
+    const result = await routeInboundMessage({
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      messageId: 'wamid-audio',
+      type: 'audio',
+      audioMediaId: 'media-1',
+      text: '',
+    });
+
+    expect(handleTextPosMock).not.toHaveBeenCalled();
+    expect(sendTextMock).toHaveBeenCalledWith(
+      '+6281234567890',
+      expect.stringContaining('kirim ulang'),
+    );
+    expect(result).toEqual({ handled: true, action: 'audio_transcription_failed' });
   });
 });
