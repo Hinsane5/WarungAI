@@ -139,6 +139,7 @@ describe('kasbonService', () => {
       items: [{ name: 'Rokok', qty: 2, unit: null, unitPrice: 25000, lineTotal: 50000 }],
       amount: 50000,
       originalAmount: 50000,
+      dueDate: new Date('2026-06-15T03:00:00.000Z'),
     };
     customerFindOneMock.mockResolvedValueOnce(null);
     customerCreateMock.mockResolvedValue(customer);
@@ -189,6 +190,7 @@ describe('kasbonService', () => {
       items: [{ name: 'Rokok', qty: 2, unit: null, unitPrice: 25000, lineTotal: 50000 }],
       amount: 50000,
       originalAmount: 50000,
+      dueDate: new Date('2026-06-15T03:00:00.000Z'),
     });
     expect(customer.save).toHaveBeenCalledTimes(1);
     expect(customer.creditScore).toMatchObject({ band: 'risky' });
@@ -201,6 +203,55 @@ describe('kasbonService', () => {
       expect.stringContaining('Peringatan: Budi masuk kategori risky'),
     );
     expect(result.action).toBe('kasbon_recorded');
+  });
+
+  it('new kasbon due dates make credit warnings fire after the debt becomes overdue', async () => {
+    const customer = createCustomer();
+    const createdKasbon = {
+      _id: 'kasbon-new',
+      shopId: 'shop-1',
+      customerId: 'customer-1',
+      status: 'open',
+      items: [{ name: 'Rokok', qty: 2, unit: null, unitPrice: 25000, lineTotal: 50000 }],
+      amount: 50000,
+      originalAmount: 50000,
+      dueDate: new Date('2026-05-01T00:00:00.000Z'),
+    };
+    customerFindOneMock.mockResolvedValueOnce(customer);
+    resolveProductMock.mockResolvedValue({
+      product: { _id: 'product-1', name: 'Rokok', sellPrice: 25000, unit: null },
+      rawName: 'rokok',
+      created: false,
+    });
+    extractEntitiesMock.mockResolvedValue({
+      intent: 'kasbon',
+      customerRef: 'budi',
+      items: [{ rawName: 'rokok', qty: 2, unit: null, unitPrice: null, action: 'sale' }],
+      confidence: 0.9,
+      needsClarification: false,
+      clarificationQuestion: null,
+    });
+    kasbonCreateMock.mockImplementation(async (payload) => ({
+      _id: 'kasbon-new',
+      ...payload,
+      dueDate: new Date('2026-05-01T00:00:00.000Z'),
+    }));
+    kasbonFindMock.mockResolvedValue([createdKasbon]);
+
+    const result = await handleKasbon({
+      shop: createShop(),
+      session: createSession(),
+      message: {
+        from: '+628999',
+        text: 'kasbon budi 2 rokok',
+      },
+    });
+
+    expect(result.score.band).toBe('risky');
+    expect(sendTextMock).toHaveBeenCalledWith(
+      '+628999',
+      expect.stringContaining('Peringatan: Budi masuk kategori risky'),
+    );
   });
 
   it('updates an existing open kasbon for the same customer', async () => {

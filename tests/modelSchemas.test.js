@@ -37,5 +37,6 @@ describe('Mongoose model schemas', () => {
     expect(hasIndex(Kasbon, { shopId: 1, customerId: 1, status: 1 })).toBe(true);
     expect(hasIndex(Kasbon, { shopId: 1, status: 1, dueDate: 1 })).toBe(true);
     expect(Session.schema.path('ownerPhone').options.unique).toBe(true);
+    expect(Session.schema.path('state').enumValues).toContain('awaiting_kasbon_reminder_approval');
   });
 });

@@ -30,6 +30,9 @@ const envSchema = z.object({
   EXTRACTION_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.6),
   SESSION_TTL_MINUTES: z.coerce.number().int().positive().default(60),
   STT_LOW_CONFIDENCE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.75),
+  KASBON_DEFAULT_DUE_DAYS: z.coerce.number().int().positive().default(14),
+  KASBON_WATCH_RISK_THRESHOLD: z.coerce.number().int().nonnegative().default(1),
+  KASBON_RISKY_RISK_THRESHOLD: z.coerce.number().int().nonnegative().default(1_000_000),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -71,5 +74,8 @@ export const config = {
     extractionConfidenceThreshold: parsedEnv.data.EXTRACTION_CONFIDENCE_THRESHOLD,
     sessionTtlMinutes: parsedEnv.data.SESSION_TTL_MINUTES,
     sttLowConfidenceThreshold: parsedEnv.data.STT_LOW_CONFIDENCE_THRESHOLD,
+    kasbonDefaultDueDays: parsedEnv.data.KASBON_DEFAULT_DUE_DAYS,
+    kasbonWatchRiskThreshold: parsedEnv.data.KASBON_WATCH_RISK_THRESHOLD,
+    kasbonRiskyRiskThreshold: parsedEnv.data.KASBON_RISKY_RISK_THRESHOLD,
   },
 };

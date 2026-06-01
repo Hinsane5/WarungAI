@@ -1,4 +1,5 @@
 import { extractEntities } from '../ai/extractor.js';
+import { config } from '../config/index.js';
 import { sendText } from '../messaging/whatsapp.js';
 import { Customer } from '../models/Customer.js';
 import { Kasbon } from '../models/Kasbon.js';
@@ -8,9 +9,6 @@ import { setSessionState } from './sessionService.js';
 
 const REMINDER_APPROVAL_YES = new Set(['kirim', 'ya', 'y', 'ok', 'oke']);
 const REMINDER_APPROVAL_NO = new Set(['batal', 't', 'tidak', 'nggak', 'gak']);
-const WATCH_RISK_THRESHOLD = 1;
-const RISKY_RISK_THRESHOLD = 1_000_000;
-
 function normalizeAlias(value) {
   return String(value ?? '')
     .trim()
@@ -54,11 +52,11 @@ function daysOverdue(dueDate, now = new Date()) {
 }
 
 function bandForRisk(risk) {
-  if (risk >= RISKY_RISK_THRESHOLD) {
+  if (risk >= config.limits.kasbonRiskyRiskThreshold) {
     return 'risky';
   }
 
-  if (risk >= WATCH_RISK_THRESHOLD) {
+  if (risk >= config.limits.kasbonWatchRiskThreshold) {
     return 'watch';
   }
 
@@ -171,6 +169,12 @@ function formatCustomerDebtDetail({ shop, kasbon }) {
   ].join('\n');
 }
 
+function defaultDueDate(now = new Date()) {
+  const dueDate = new Date(now);
+  dueDate.setDate(dueDate.getDate() + config.limits.kasbonDefaultDueDays);
+  return dueDate;
+}
+
 async function createOrUpdateOpenKasbon({ shopId, customerId, items, amount }) {
   const existingKasbon = await Kasbon.findOne({
     shopId,
@@ -186,6 +190,7 @@ async function createOrUpdateOpenKasbon({ shopId, customerId, items, amount }) {
       items,
       amount,
       originalAmount: amount,
+      dueDate: defaultDueDate(),
     });
   }
 

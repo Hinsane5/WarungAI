@@ -6,7 +6,14 @@ const sessionSchema = new mongoose.Schema(
     ownerPhone: { type: String, required: true, trim: true, unique: true },
     state: {
       type: String,
-      enum: ['idle', 'awaiting_confirmation', 'correcting', 'clarifying', 'fast_text_fallback'],
+      enum: [
+        'idle',
+        'awaiting_confirmation',
+        'awaiting_kasbon_reminder_approval',
+        'correcting',
+        'clarifying',
+        'fast_text_fallback',
+      ],
       default: 'idle',
     },
     context: {
