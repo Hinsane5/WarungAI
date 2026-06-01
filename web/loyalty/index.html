@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>{{SHOP_NAME}} Loyalty</title>
+    <style>
+      :root {
+        color: #171717;
+        background: #fafafa;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #fafafa;
+      }
+
+      main {
+        width: min(100%, 480px);
+        margin: 0 auto;
+        padding: 24px 18px 32px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 24px;
+        line-height: 1.15;
+        font-weight: 750;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+        color: #525252;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      form {
+        margin-top: 28px;
+        display: grid;
+        gap: 14px;
+      }
+
+      label {
+        display: grid;
+        gap: 7px;
+        color: #262626;
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      input {
+        width: 100%;
+        min-height: 48px;
+        border: 1px solid #d4d4d4;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #171717;
+        font: inherit;
+        font-size: 16px;
+        padding: 11px 12px;
+      }
+
+      input:focus {
+        border-color: #0f766e;
+        outline: 3px solid #ccfbf1;
+      }
+
+      button {
+        min-height: 48px;
+        border: 0;
+        border-radius: 8px;
+        background: #0f766e;
+        color: #ffffff;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 750;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        background: #a3a3a3;
+        cursor: wait;
+      }
+
+      .status {
+        min-height: 24px;
+        color: #404040;
+        font-size: 14px;
+      }
+
+      .status[data-tone="error"] {
+        color: #b91c1c;
+      }
+
+      .status[data-tone="success"] {
+        color: #047857;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>{{SHOP_NAME}}</h1>
+      <p>Daftarkan nomor WhatsApp untuk menerima stamp digital dan info dari warung ini.</p>
+
+      <form id="loyalty-form">
+        <input id="slug" name="slug" type="hidden" value="{{SLUG}}" />
+        <label>
+          Nama
+          <input
+            id="name"
+            name="name"
+            autocomplete="name"
+            inputmode="text"
+            maxlength="80"
+            placeholder="Nama kamu"
+          />
+        </label>
+        <label>
+          Nomor WhatsApp
+          <input
+            id="phone"
+            name="phone"
+            autocomplete="tel"
+            inputmode="tel"
+            required
+            minlength="8"
+            maxlength="20"
+            placeholder="08xxxxxxxxxx"
+          />
+        </label>
+        <button id="submit" type="submit">Daftar</button>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </form>
+    </main>
+
+    <script>
+      const form = document.querySelector("#loyalty-form");
+      const button = document.querySelector("#submit");
+      const statusEl = document.querySelector("#status");
+
+      function setStatus(message, tone) {
+        statusEl.textContent = message;
+        statusEl.dataset.tone = tone || "";
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        button.disabled = true;
+        setStatus("Mendaftarkan nomor...", "");
+
+        const body = Object.fromEntries(new FormData(form));
+
+        try {
+          const response = await fetch("/api/loyalty/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const payload = await response.json();
+
+          if (!response.ok || !payload.ok) {
+            throw new Error(payload.error || "registration_failed");
+          }
+
+          setStatus("Terdaftar. Cek WhatsApp untuk konfirmasi stamp.", "success");
+          form.reset();
+        } catch {
+          setStatus("Nomor belum bisa didaftarkan. Periksa nomor lalu coba lagi.", "error");
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

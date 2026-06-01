@@ -3,6 +3,7 @@ import pinoHttp from 'pino-http';
 import { randomUUID } from 'node:crypto';
 
 import { getDbStatus } from './config/db.js';
+import { loyaltyRouter } from './routes/loyalty.js';
 import { webhookRouter } from './routes/webhook.js';
 import { logger } from './utils/logger.js';
 
@@ -38,6 +39,7 @@ export function createApp() {
   });
 
   app.use('/webhook', webhookRouter);
+  app.use(loyaltyRouter);
 
   return app;
 }

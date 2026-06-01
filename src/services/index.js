@@ -11,3 +11,8 @@ export {
   recordKasbonPayment,
   refreshCustomerCreditScore,
 } from './kasbonService.js';
+export {
+  buildLoyaltyQrUrl,
+  registerLoyaltyCustomer,
+  resolveShopByLoyaltySlug,
+} from './loyaltyService.js';
