@@ -33,3 +33,4 @@ process.env.BIGQUERY_ENABLED = 'false';
 process.env.BIGQUERY_DATASET = 'warungai_test';
 process.env.BIGQUERY_TABLE = 'transaction_items';
 process.env.BIGQUERY_LOCATION = 'asia-southeast2';
+process.env.JOBS_TRIGGER_SECRET = 'test-jobs-secret';

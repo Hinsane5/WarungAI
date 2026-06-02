@@ -6,6 +6,7 @@ import { getDbStatus } from './config/db.js';
 import { apiRouter } from './routes/api.js';
 import { dashboardRouter } from './routes/dashboard.js';
 import { integrationRouter } from './routes/integrations.js';
+import { jobsRouter } from './routes/jobs.js';
 import { loyaltyRouter } from './routes/loyalty.js';
 import { webhookRouter } from './routes/webhook.js';
 import { logger } from './utils/logger.js';
@@ -46,6 +47,7 @@ export function createApp() {
   app.use(dashboardRouter);
   app.use(apiRouter);
   app.use(integrationRouter);
+  app.use(jobsRouter);
 
   return app;
 }

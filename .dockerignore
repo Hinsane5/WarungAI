@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+secrets
+.local
+logs
+*.log
+tests
+DOCS
+MockUI_3
+MockUI_3.zip
+.vscode
+.idea

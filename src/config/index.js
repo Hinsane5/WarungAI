@@ -49,6 +49,7 @@ const envSchema = z
     CRM_JOBS_ENABLED: booleanFromEnv.default(true),
     CRM_NIGHTLY_CRON: z.string().min(1).default('0 1 * * *'),
     CRM_TIMEZONE: z.string().min(1).default('Asia/Jakarta'),
+    JOBS_TRIGGER_SECRET: z.string().default(''),
 
     BIGQUERY_ENABLED: booleanFromEnv.default(false),
     BIGQUERY_DATASET: z.string().min(1).default('warungai'),
@@ -128,6 +129,7 @@ export const config = {
     enabled: parsedEnv.data.CRM_JOBS_ENABLED,
     nightlyCron: parsedEnv.data.CRM_NIGHTLY_CRON,
     timezone: parsedEnv.data.CRM_TIMEZONE,
+    triggerSecret: parsedEnv.data.JOBS_TRIGGER_SECRET,
   },
   bigquery: {
     enabled: parsedEnv.data.BIGQUERY_ENABLED,
