@@ -5,6 +5,7 @@ const shopSchema = new mongoose.Schema(
     name: { type: String, trim: true },
     ownerPhone: { type: String, required: true, trim: true, unique: true },
     ownerName: { type: String, trim: true },
+    region: { type: String, trim: true, default: 'Tangerang' },
     tier: { type: String, enum: ['free', 'premium'], default: 'free' },
     settings: {
       locale: { type: String, default: 'id-ID' },

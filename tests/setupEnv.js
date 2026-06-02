@@ -29,3 +29,7 @@ process.env.SALES_WINDOW_DAYS = '14';
 process.env.RESTOCK_LEAD_TIME_DAYS = '3';
 process.env.EXPIRY_WARN_DAYS = '7';
 process.env.CRM_JOBS_ENABLED = 'false';
+process.env.BIGQUERY_ENABLED = 'false';
+process.env.BIGQUERY_DATASET = 'warungai_test';
+process.env.BIGQUERY_TABLE = 'transaction_items';
+process.env.BIGQUERY_LOCATION = 'asia-southeast2';

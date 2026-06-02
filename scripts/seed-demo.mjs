@@ -44,6 +44,7 @@ const shop = await Shop.create({
   name: 'Warung Bu Sri',
   ownerPhone: '+6281200000000',
   ownerName: 'Bu Sri',
+  region: 'Tangerang',
   tier: 'premium',
   quotas: { koinBotBalance: 50, dailyTxnCount: 0 },
   loyaltyQrSlug: SLUG,

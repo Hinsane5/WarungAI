@@ -49,6 +49,11 @@ const envSchema = z
     CRM_JOBS_ENABLED: booleanFromEnv.default(true),
     CRM_NIGHTLY_CRON: z.string().min(1).default('0 1 * * *'),
     CRM_TIMEZONE: z.string().min(1).default('Asia/Jakarta'),
+
+    BIGQUERY_ENABLED: booleanFromEnv.default(false),
+    BIGQUERY_DATASET: z.string().min(1).default('warungai'),
+    BIGQUERY_TABLE: z.string().min(1).default('transaction_items'),
+    BIGQUERY_LOCATION: z.string().min(1).default('asia-southeast2'),
   })
   .superRefine((data, ctx) => {
     if (data.WHATSAPP_PROVIDER !== 'n8n') {
@@ -123,5 +128,12 @@ export const config = {
     enabled: parsedEnv.data.CRM_JOBS_ENABLED,
     nightlyCron: parsedEnv.data.CRM_NIGHTLY_CRON,
     timezone: parsedEnv.data.CRM_TIMEZONE,
+  },
+  bigquery: {
+    enabled: parsedEnv.data.BIGQUERY_ENABLED,
+    projectId: parsedEnv.data.GCP_PROJECT_ID,
+    datasetId: parsedEnv.data.BIGQUERY_DATASET,
+    tableId: parsedEnv.data.BIGQUERY_TABLE,
+    location: parsedEnv.data.BIGQUERY_LOCATION,
   },
 };

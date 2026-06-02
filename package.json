@@ -20,9 +20,12 @@
     "db:reset": "rm -rf ./.local/mongo/* && echo 'Local DB wiped (restart db:start, then db:init).'",
     "sim": "node scripts/simulate-webhook.mjs",
     "jobs:run": "node scripts/run-jobs.mjs",
-    "seed": "node scripts/seed-demo.mjs"
+    "seed": "node scripts/seed-demo.mjs",
+    "bq:export": "node scripts/bq-export.mjs",
+    "bq:report": "node scripts/bq-report.mjs"
   },
   "dependencies": {
+    "@google-cloud/bigquery": "^8.3.1",
     "@google-cloud/speech": "7.3.1",
     "@google/genai": "2.7.0",
     "dotenv": "17.4.2",
