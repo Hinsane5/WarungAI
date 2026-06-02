@@ -3,11 +3,21 @@
 const params = new URLSearchParams(window.location.search);
 const tokenInput = document.querySelector('#dashboardToken');
 const exportButton = document.querySelector('#exportButton');
+const chatNavLink = document.querySelector('#chatNavLink');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 let salesChart;
 let categoryChart;
 
 tokenInput.value = dashboardToken;
+
+function syncTokenLinks() {
+  const token = tokenInput.value.trim();
+  chatNavLink.href = token
+    ? `/dashboard/chat?${new URLSearchParams({ token })}`
+    : '/dashboard/chat';
+}
+
+syncTokenLinks();
 
 const rupiah = (value) =>
   new Intl.NumberFormat('id-ID', {
@@ -197,6 +207,7 @@ async function loadDashboard() {
 tokenInput.addEventListener('change', () => {
   const query = new URLSearchParams(window.location.search);
   query.set('token', tokenInput.value.trim());
+  syncTokenLinks();
   window.location.search = query.toString();
 });
 

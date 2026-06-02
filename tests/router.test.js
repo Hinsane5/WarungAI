@@ -205,7 +205,9 @@ describe('routeInboundMessage', () => {
     await routeInboundMessage(message);
 
     expect(downloadMediaMock).toHaveBeenCalledWith('media-1');
-    expect(transcribeOggOpusMock).toHaveBeenCalledWith(Buffer.from('ogg-opus'));
+    expect(transcribeOggOpusMock).toHaveBeenCalledWith(Buffer.from('ogg-opus'), {
+      encoding: undefined,
+    });
     expect(handleTextPosMock).toHaveBeenCalledWith({
       shop: { _id: 'shop-1' },
       session: { _id: 'session-1', state: 'idle' },
@@ -235,5 +237,24 @@ describe('routeInboundMessage', () => {
       expect.stringContaining('kirim ulang'),
     );
     expect(result).toEqual({ handled: true, action: 'audio_transcription_failed' });
+  });
+
+  it('passes browser audio encoding through to STT', async () => {
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      messageId: 'chat-audio',
+      type: 'audio',
+      audioBuffer: Buffer.from('webm-opus'),
+      audioEncoding: 'WEBM_OPUS',
+      text: '',
+    };
+
+    await routeInboundMessage(message);
+
+    expect(downloadMediaMock).not.toHaveBeenCalled();
+    expect(transcribeOggOpusMock).toHaveBeenCalledWith(Buffer.from('webm-opus'), {
+      encoding: 'WEBM_OPUS',
+    });
   });
 });

@@ -56,4 +56,20 @@ describe('sttClient', () => {
       confidence: 0,
     });
   });
+
+  it('allows WEBM/Opus encoding for browser voice notes', async () => {
+    recognizeMock.mockResolvedValueOnce([
+      {
+        results: [{ alternatives: [{ transcript: 'jual 1 aqua', confidence: 0.9 }] }],
+      },
+    ]);
+
+    await transcribeOggOpus(Buffer.from('audio-bytes'), { encoding: 'WEBM_OPUS' });
+
+    expect(recognizeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({ encoding: 'WEBM_OPUS' }),
+      }),
+    );
+  });
 });

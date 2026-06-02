@@ -1,3 +1,4 @@
+export { sendChatMessage } from './chatController.js';
 export {
   dashboardCategoryMix,
   dashboardCreditScores,
@@ -7,6 +8,7 @@ export {
   dashboardSummary,
   dashboardTopItems,
   renderDashboard,
+  renderDashboardChat,
 } from './dashboardController.js';
 export { registerLoyalty, renderLoyaltyPage } from './loyaltyController.js';
 export { receiveN8nInbound } from './integrationController.js';

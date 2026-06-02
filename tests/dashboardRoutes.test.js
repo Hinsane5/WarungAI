@@ -51,6 +51,14 @@ describe('dashboard routes', () => {
 
     expect(response.text).toContain('WarungAI Dashboard');
     expect(response.text).toContain('/dashboard/js/app.js');
+    expect(response.text).toContain('/dashboard/chat');
+  });
+
+  it('renders the dashboard chat page', async () => {
+    const response = await request(app).get('/dashboard/chat').expect(200);
+
+    expect(response.text).toContain('WarungAI Chat Bot');
+    expect(response.text).toContain('/dashboard/js/chat.js');
   });
 
   it('requires a dashboard token for dashboard API requests', async () => {

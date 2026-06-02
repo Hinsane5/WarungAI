@@ -1,4 +1,5 @@
 import { config } from '../config/index.js';
+import { captureStore } from './capture.js';
 import { sendN8nText } from './n8n.js';
 
 function toWhatsAppPhone(phone) {
@@ -36,6 +37,12 @@ async function sendCloudText(to, body) {
 // Single send facade. Dispatches to the configured transport so the rest of the
 // codebase (router, services, jobs) never needs to know which provider is active.
 export async function sendText(to, body) {
+  const sink = captureStore.getStore();
+  if (sink) {
+    sink.push({ to, body });
+    return { captured: true };
+  }
+
   if (config.whatsapp.provider === 'n8n') {
     return sendN8nText(to, body);
   }

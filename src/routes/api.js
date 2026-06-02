@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import { sendChatMessage } from '../controllers/chatController.js';
 import {
   dashboardCategoryMix,
   dashboardCreditScores,
@@ -12,6 +13,7 @@ import {
 
 export const apiRouter = Router();
 
+apiRouter.post('/api/chat/send', sendChatMessage);
 apiRouter.get('/api/dashboard/summary', dashboardSummary);
 apiRouter.get('/api/dashboard/sales-trend', dashboardSalesTrend);
 apiRouter.get('/api/dashboard/category-mix', dashboardCategoryMix);

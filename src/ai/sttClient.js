@@ -7,10 +7,10 @@ function getSpeechClient() {
   return speechClient;
 }
 
-export async function transcribeOggOpus(audioBuffer) {
+export async function transcribeOggOpus(audioBuffer, { encoding = 'OGG_OPUS' } = {}) {
   const [response] = await getSpeechClient().recognize({
     config: {
-      encoding: 'OGG_OPUS',
+      encoding,
       sampleRateHertz: 48000,
       languageCode: 'id-ID',
       enableAutomaticPunctuation: true,

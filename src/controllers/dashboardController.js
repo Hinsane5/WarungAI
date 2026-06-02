@@ -15,6 +15,7 @@ const dashboardHtml = readFileSync(
   new URL('../../web/dashboard/index.html', import.meta.url),
   'utf8',
 );
+const chatHtml = readFileSync(new URL('../../web/dashboard/chat.html', import.meta.url), 'utf8');
 
 async function resolveDashboardShop(req, res) {
   const token = req.query.token;
@@ -42,6 +43,11 @@ function handleDashboardError(req, res, error) {
 export function renderDashboard(_req, res) {
   res.set('Cache-Control', 'public, max-age=300');
   res.status(200).type('html').send(dashboardHtml);
+}
+
+export function renderDashboardChat(_req, res) {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.status(200).type('html').send(chatHtml);
 }
 
 export async function dashboardSummary(req, res) {

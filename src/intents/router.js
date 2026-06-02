@@ -33,7 +33,7 @@ async function handleAudioMessage({ shop, session, message }) {
   try {
     // Meta provides a media id to download; the n8n transport supplies the bytes directly.
     const audioBuffer = message.audioBuffer ?? (await downloadMedia(message.audioMediaId));
-    transcription = await transcribeOggOpus(audioBuffer);
+    transcription = await transcribeOggOpus(audioBuffer, { encoding: message.audioEncoding });
   } catch (error) {
     logger.warn(
       {

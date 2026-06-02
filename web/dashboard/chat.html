@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WarungAI Chat Bot</title>
+    <link rel="stylesheet" href="/dashboard/css/chat.css" />
+    <script defer src="/dashboard/js/chat.js"></script>
+  </head>
+  <body>
+    <main class="phone-shell">
+      <header class="chat-header">
+        <a class="back-button" id="backLink" href="/dashboard" aria-label="Kembali">‹</a>
+        <div class="bot-avatar" aria-hidden="true">W</div>
+        <div class="bot-meta">
+          <h1>WarungAI</h1>
+          <p id="presenceText">online</p>
+        </div>
+      </header>
+
+      <section class="message-list" id="messageList" aria-live="polite">
+        <div class="day-chip">Hari ini</div>
+        <article class="bubble bubble--in">
+          <p>Halo, saya WarungAI. Kirim transaksi seperti di WhatsApp.</p>
+          <time></time>
+        </article>
+      </section>
+
+      <footer class="composer">
+        <button class="tool-button" type="button" aria-label="Emoji">☺</button>
+        <button class="tool-button" type="button" aria-label="Lampiran">⌕</button>
+        <textarea
+          id="messageInput"
+          class="message-input"
+          rows="1"
+          placeholder="Ketik pesan"
+          autocomplete="off"
+        ></textarea>
+        <button id="voiceButton" class="send-button" type="button" aria-label="Rekam voice note">
+          <span id="sendIcon">●</span>
+        </button>
+      </footer>
+    </main>
+  </body>
+</html>
