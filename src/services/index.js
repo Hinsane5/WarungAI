@@ -1,3 +1,13 @@
+export {
+  buildMonthlyExcelExport,
+  getCategoryMix,
+  getCreditScores,
+  getDashboardSummary,
+  getPredictiveRestock,
+  getSalesTrend,
+  getShopByOwnerPhone,
+  getTopItems,
+} from './analyticsService.js';
 export { findOrCreateByOwnerPhone, generateLoyaltyQrSlug } from './shopService.js';
 export { confirmPendingTransaction, handleTextPos } from './posService.js';
 export { learnAlias, resolveProduct } from './productService.js';

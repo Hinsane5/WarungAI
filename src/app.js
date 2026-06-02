@@ -3,6 +3,8 @@ import pinoHttp from 'pino-http';
 import { randomUUID } from 'node:crypto';
 
 import { getDbStatus } from './config/db.js';
+import { apiRouter } from './routes/api.js';
+import { dashboardRouter } from './routes/dashboard.js';
 import { integrationRouter } from './routes/integrations.js';
 import { loyaltyRouter } from './routes/loyalty.js';
 import { webhookRouter } from './routes/webhook.js';
@@ -41,6 +43,8 @@ export function createApp() {
 
   app.use('/webhook', webhookRouter);
   app.use(loyaltyRouter);
+  app.use(dashboardRouter);
+  app.use(apiRouter);
   app.use(integrationRouter);
 
   return app;

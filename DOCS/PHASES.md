@@ -25,7 +25,7 @@
 | 5 | Smart Kasbon + credit scoring | 🟡 |
 | 6 | Frictionless loyalty capture | 🟡 |
 | 7 | Proactive CRM + predictive restock (batch) | ⬜ |
-| 8 | Analytics dashboard + export | ⬜ |
+| 8 | Analytics dashboard + export | 🟡 |
 | 9 | Hardening, eval, demo prep | ⬜ |
 
 > Keep this table updated as you progress (⬜ → 🟡 in progress → ✅ done).
