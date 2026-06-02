@@ -40,3 +40,6 @@ Thumbs.db
 
 # Local dev data (MongoDB, etc.)
 .local/
+
+# Internal docs — kept local, not published to the repo
+DOCS/
