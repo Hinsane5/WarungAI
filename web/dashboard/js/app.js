@@ -1,37 +1,39 @@
 /* global Chart, URLSearchParams, document, localStorage, window */
 
 const params = new URLSearchParams(window.location.search);
-const ownerInput = document.querySelector("#ownerPhone");
-const exportButton = document.querySelector("#exportButton");
-const ownerPhone = params.get("ownerPhone") || localStorage.getItem("warungai.ownerPhone") || "";
+const tokenInput = document.querySelector('#dashboardToken');
+const exportButton = document.querySelector('#exportButton');
+const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 let salesChart;
 let categoryChart;
 
-ownerInput.value = ownerPhone;
+tokenInput.value = dashboardToken;
 
 const rupiah = (value) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
+  new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
     maximumFractionDigits: 0,
   }).format(value || 0);
 
 function api(path) {
-  const query = new URLSearchParams({ ownerPhone: ownerInput.value.trim() });
+  const query = new URLSearchParams({ token: tokenInput.value.trim() });
   return fetch(`${path}?${query}`).then(async (response) => {
-    const type = response.headers.get("content-type") || "";
-    const payload = type.includes("application/json") ? await response.json() : await response.text();
+    const type = response.headers.get('content-type') || '';
+    const payload = type.includes('application/json')
+      ? await response.json()
+      : await response.text();
     if (!response.ok) {
-      throw new Error(payload?.error || "request_failed");
+      throw new Error(payload?.error || 'request_failed');
     }
     return payload;
   });
 }
 
 function badgeClass(kind) {
-  if (kind === "danger" || kind === "risky" || kind === "urgent") return "badge badge--danger";
-  if (kind === "warning" || kind === "watch") return "badge badge--warning";
-  return "badge badge--success";
+  if (kind === 'danger' || kind === 'risky' || kind === 'urgent') return 'badge badge--danger';
+  if (kind === 'warning' || kind === 'watch') return 'badge badge--warning';
+  return 'badge badge--success';
 }
 
 function setText(id, text) {
@@ -44,44 +46,44 @@ function renderRows(target, rows, emptyText) {
     el.innerHTML = `<div class="empty-state">${emptyText}</div>`;
     return;
   }
-  el.innerHTML = rows.join("");
+  el.innerHTML = rows.join('');
 }
 
 async function loadSummary() {
-  const data = await api("/api/dashboard/summary");
-  setText("#shopName", data.shop.name || "Warung");
-  setText("#tierLabel", `${data.shop.tier || "free"} tier`);
-  setText("#omzetValue", rupiah(data.omzet.value));
-  setText("#omzetDelta", `↑ ${data.omzet.deltaPct}% vs ${data.omzet.vs}`);
-  setText("#piutangValue", rupiah(data.piutang.value));
-  setText("#piutangDelta", `⚠ ${data.piutang.overdueCount} jatuh tempo`);
-  setText("#loyaltyValue", String(data.loyalty.count));
-  setText("#loyaltyDelta", `↑ ${data.loyalty.newToday} baru hari ini`);
-  setText("#txnValue", String(data.txnToday.count));
-  setText("#txnDelta", `↑ ${data.txnToday.deltaPct}%`);
+  const data = await api('/api/dashboard/summary');
+  setText('#shopName', data.shop.name || 'Warung');
+  setText('#tierLabel', `${data.shop.tier || 'free'} tier`);
+  setText('#omzetValue', rupiah(data.omzet.value));
+  setText('#omzetDelta', `↑ ${data.omzet.deltaPct}% vs ${data.omzet.vs}`);
+  setText('#piutangValue', rupiah(data.piutang.value));
+  setText('#piutangDelta', `⚠ ${data.piutang.overdueCount} jatuh tempo`);
+  setText('#loyaltyValue', String(data.loyalty.count));
+  setText('#loyaltyDelta', `↑ ${data.loyalty.newToday} baru hari ini`);
+  setText('#txnValue', String(data.txnToday.count));
+  setText('#txnDelta', `↑ ${data.txnToday.deltaPct}%`);
 }
 
 async function loadSalesTrend() {
-  const data = await api("/api/dashboard/sales-trend");
-  const ctx = document.querySelector("#salesTrend");
-  const gradient = ctx.getContext("2d").createLinearGradient(0, 0, 0, 260);
-  gradient.addColorStop(0, "rgba(79,201,127,0.22)");
-  gradient.addColorStop(1, "rgba(79,201,127,0)");
+  const data = await api('/api/dashboard/sales-trend');
+  const ctx = document.querySelector('#salesTrend');
+  const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 260);
+  gradient.addColorStop(0, 'rgba(79,201,127,0.22)');
+  gradient.addColorStop(1, 'rgba(79,201,127,0)');
   salesChart?.destroy();
   salesChart = new Chart(ctx, {
-    type: "line",
+    type: 'line',
     data: {
       labels: data.labels,
       datasets: [
         {
           data: data.values,
-          borderColor: "#4FC97F",
+          borderColor: '#4FC97F',
           borderWidth: 3,
           tension: 0.4,
           fill: true,
           backgroundColor: gradient,
-          pointBackgroundColor: "#fff",
-          pointBorderColor: "#4FC97F",
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#4FC97F',
           pointBorderWidth: 2,
           pointRadius: 4,
         },
@@ -94,8 +96,8 @@ async function loadSalesTrend() {
       },
       scales: {
         y: {
-          ticks: { callback: (value) => `Rp ${Number(value).toLocaleString("id-ID")}` },
-          grid: { color: "#EAE7DD" },
+          ticks: { callback: (value) => `Rp ${Number(value).toLocaleString('id-ID')}` },
+          grid: { color: '#EAE7DD' },
           beginAtZero: true,
         },
         x: { grid: { display: false } },
@@ -107,80 +109,82 @@ async function loadSalesTrend() {
 
 async function loadCategoryAndTopItems() {
   const [categories, topItems] = await Promise.all([
-    api("/api/dashboard/category-mix"),
-    api("/api/dashboard/top-items"),
+    api('/api/dashboard/category-mix'),
+    api('/api/dashboard/top-items'),
   ]);
-  const ctx = document.querySelector("#categoryMix");
+  const ctx = document.querySelector('#categoryMix');
   categoryChart?.destroy();
   categoryChart = new Chart(ctx, {
-    type: "doughnut",
+    type: 'doughnut',
     data: {
       labels: categories.map((item) => item.category),
       datasets: [
         {
           data: categories.map((item) => item.value),
-          backgroundColor: ["#14443A", "#2E8B68", "#4FC97F", "#E8E2D0"],
-          borderColor: "#fff",
+          backgroundColor: ['#14443A', '#2E8B68', '#4FC97F', '#E8E2D0'],
+          borderColor: '#fff',
           borderWidth: 3,
         },
       ],
     },
     options: {
-      cutout: "68%",
+      cutout: '68%',
       plugins: {
-        legend: { position: "top", labels: { boxWidth: 12, usePointStyle: true } },
-        tooltip: { callbacks: { label: (context) => `${context.label}: ${rupiah(context.parsed)}` } },
+        legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true } },
+        tooltip: {
+          callbacks: { label: (context) => `${context.label}: ${rupiah(context.parsed)}` },
+        },
       },
       maintainAspectRatio: false,
     },
   });
 
   renderRows(
-    "#topItems",
+    '#topItems',
     topItems.map(
       (item) => `<div class="list-row">
         <div><p class="list-row__title">${item.name}</p><p class="list-row__meta">${item.qty} terjual</p></div>
         <span class="badge badge--success">${rupiah(item.value)}</span>
       </div>`,
     ),
-    "Belum ada produk terjual",
+    'Belum ada produk terjual',
   );
 }
 
 async function loadRestock() {
-  const rows = await api("/api/dashboard/predictive-restock");
+  const rows = await api('/api/dashboard/predictive-restock');
   renderRows(
-    "#restockList",
+    '#restockList',
     rows.map(
       (item) => `<div class="list-row">
-        <div><p class="list-row__title">${item.name}</p><p class="list-row__meta">Sisa: ${item.remaining} ${item.unit} · Est. Habis: ${item.daysToStockout ?? "-"} hari</p></div>
-        <span class="${badgeClass(item.urgency)}">${item.urgency === "urgent" ? "Urgent" : "Perlu Restock"}</span>
+        <div><p class="list-row__title">${item.name}</p><p class="list-row__meta">Sisa: ${item.remaining} ${item.unit} · Est. Habis: ${item.daysToStockout ?? '-'} hari</p></div>
+        <span class="${badgeClass(item.urgency)}">${item.urgency === 'urgent' ? 'Urgent' : 'Perlu Restock'}</span>
       </div>`,
     ),
-    "Belum ada stok yang perlu perhatian",
+    'Belum ada stok yang perlu perhatian',
   );
 }
 
 async function loadCreditScores() {
-  const rows = await api("/api/dashboard/credit-scores");
+  const rows = await api('/api/dashboard/credit-scores');
   renderRows(
-    "#creditList",
+    '#creditList',
     rows.map(
       (item) => `<div class="list-row">
         <div><p class="list-row__title">${item.name}</p><p class="list-row__meta">Debt: ${rupiah(item.debt)} · ${item.lateNote}</p></div>
         <span class="${badgeClass(item.band)}">${item.score}/100</span>
       </div>`,
     ),
-    "Belum ada kasbon terbuka",
+    'Belum ada kasbon terbuka',
   );
 }
 
 async function loadDashboard() {
-  if (!ownerInput.value.trim()) {
-    document.querySelector("#shopName").textContent = "Masukkan nomor owner";
+  if (!tokenInput.value.trim()) {
+    document.querySelector('#shopName').textContent = 'Masukkan dashboard token';
     return;
   }
-  localStorage.setItem("warungai.ownerPhone", ownerInput.value.trim());
+  localStorage.setItem('warungai.dashboardToken', tokenInput.value.trim());
   await Promise.all([
     loadSummary(),
     loadSalesTrend(),
@@ -190,18 +194,18 @@ async function loadDashboard() {
   ]);
 }
 
-ownerInput.addEventListener("change", () => {
+tokenInput.addEventListener('change', () => {
   const query = new URLSearchParams(window.location.search);
-  query.set("ownerPhone", ownerInput.value.trim());
+  query.set('token', tokenInput.value.trim());
   window.location.search = query.toString();
 });
 
-exportButton.addEventListener("click", () => {
+exportButton.addEventListener('click', () => {
   const month = new Date().toISOString().slice(0, 7);
-  const query = new URLSearchParams({ ownerPhone: ownerInput.value.trim(), month });
+  const query = new URLSearchParams({ token: tokenInput.value.trim(), month });
   window.location.href = `/api/dashboard/export?${query}`;
 });
 
 loadDashboard().catch(() => {
-  document.querySelector("#shopName").textContent = "Dashboard belum tersedia";
+  document.querySelector('#shopName').textContent = 'Dashboard belum tersedia';
 });

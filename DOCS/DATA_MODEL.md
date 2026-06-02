@@ -59,10 +59,11 @@ erDiagram
     koinBotBalance: { type: Number, default: 0 }   // broadcast credits remaining
   },
   loyaltyQrSlug: String,         // unique slug embedded in the static QR URL
+  dashboardToken: String,        // unique secret token for dashboard/export access
   createdAt, updatedAt
 }
 ```
-**Indexes:** unique on `ownerPhone`; unique on `loyaltyQrSlug`.
+**Indexes:** unique on `ownerPhone`; unique on `loyaltyQrSlug`; unique on `dashboardToken`.
 
 ### Product
 

@@ -15,6 +15,7 @@ describe('Mongoose model schemas', () => {
   it('defines shop uniqueness and defaults', () => {
     expect(Shop.schema.path('ownerPhone').options.unique).toBe(true);
     expect(Shop.schema.path('loyaltyQrSlug').options.unique).toBe(true);
+    expect(Shop.schema.path('dashboardToken').options.unique).toBe(true);
     expect(Shop.schema.path('tier').options.default).toBe('free');
   });
 

@@ -16,6 +16,7 @@ import { Transaction } from '../src/models/Transaction.js';
 import { refreshCustomerCreditScore } from '../src/services/kasbonService.js';
 
 const SLUG = 'warung-demo';
+const DASHBOARD_TOKEN = 'dash_demo_8f6b8e4c3f9d4e19b2a6f0d1';
 const now = new Date();
 const atDaysAgo = (n, hour = 10) => {
   const d = new Date(now);
@@ -46,6 +47,7 @@ const shop = await Shop.create({
   tier: 'premium',
   quotas: { koinBotBalance: 50, dailyTxnCount: 0 },
   loyaltyQrSlug: SLUG,
+  dashboardToken: DASHBOARD_TOKEN,
 });
 
 // --- catalog (with categories + a couple of low-stock items) ---
@@ -149,6 +151,7 @@ console.log('  products:', products.length, '| loyalty customers:', loyaltyCusto
 console.log('  kasbon customers: Budi (risky), Andi (watch)');
 console.log('  omzet today (approx):', omzetToday.toLocaleString('id-ID'));
 console.log('  low-stock items: Minyak Goreng 2L (4), Sirup Marjan (2)');
+console.log(`  dashboard: http://localhost:3000/dashboard?token=${DASHBOARD_TOKEN}`);
 console.log('\n  Inspect with: npm run db:inspect');
 
 await mongoose.disconnect();

@@ -40,7 +40,7 @@ const {
   buildMonthlyExcelExport,
   getDashboardSummary,
   getSalesTrend,
-  getShopByOwnerPhone,
+  getShopByDashboardToken,
   getTopItems,
 } = await import('../src/services/analyticsService.js');
 
@@ -51,6 +51,7 @@ const shop = {
   ownerName: 'Sri',
   tier: 'premium',
   loyaltyQrSlug: 'warung-sri',
+  dashboardToken: 'dash-test',
 };
 
 const products = [
@@ -159,9 +160,9 @@ describe('analyticsService', () => {
     vi.clearAllMocks();
   });
 
-  it('resolves dashboard shops by normalized owner phone', async () => {
-    await expect(getShopByOwnerPhone('628123')).resolves.toBe(shop);
-    expect(shopFindOneMock).toHaveBeenCalledWith({ ownerPhone: '+628123' });
+  it('resolves dashboard shops by unguessable token', async () => {
+    await expect(getShopByDashboardToken(' dash-test ')).resolves.toBe(shop);
+    expect(shopFindOneMock).toHaveBeenCalledWith({ dashboardToken: 'dash-test' });
   });
 
   it('counts only committed sales in summary metrics', async () => {

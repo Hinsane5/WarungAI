@@ -15,8 +15,12 @@ vi.mock('../src/models/Shop.js', () => ({
   },
 }));
 
-const { buildDefaultShopName, findOrCreateByOwnerPhone, generateLoyaltyQrSlug } =
-  await import('../src/services/shopService.js');
+const {
+  buildDefaultShopName,
+  findOrCreateByOwnerPhone,
+  generateDashboardToken,
+  generateLoyaltyQrSlug,
+} = await import('../src/services/shopService.js');
 
 describe('shopService', () => {
   beforeEach(() => {
@@ -36,8 +40,16 @@ describe('shopService', () => {
     expect(generateLoyaltyQrSlug()).toBe('warung-123456781234');
   });
 
+  it('generates a stable dashboard token format', () => {
+    expect(generateDashboardToken()).toBe('dash_12345678123412341234123456789abc');
+  });
+
   it('returns an existing shop without creating another one', async () => {
-    const existingShop = { _id: 'shop-1', ownerPhone: '+6281234567890' };
+    const existingShop = {
+      _id: 'shop-1',
+      ownerPhone: '+6281234567890',
+      dashboardToken: 'dash_existing',
+    };
     shopFindOneMock.mockResolvedValue(existingShop);
 
     const result = await findOrCreateByOwnerPhone({
@@ -47,6 +59,20 @@ describe('shopService', () => {
 
     expect(shopFindOneMock).toHaveBeenCalledWith({ ownerPhone: '+081234567890' });
     expect(shopCreateMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ shop: existingShop, created: false });
+  });
+
+  it('backfills a dashboard token on an existing legacy shop', async () => {
+    const existingShop = { _id: 'shop-1', ownerPhone: '+6281234567890', save: vi.fn() };
+    shopFindOneMock.mockResolvedValue(existingShop);
+
+    const result = await findOrCreateByOwnerPhone({
+      ownerPhone: '+6281234567890',
+      ownerName: 'Bu Sri',
+    });
+
+    expect(existingShop.dashboardToken).toBe('dash_12345678123412341234123456789abc');
+    expect(existingShop.save).toHaveBeenCalledOnce();
     expect(result).toEqual({ shop: existingShop, created: false });
   });
 
@@ -65,6 +91,7 @@ describe('shopService', () => {
       ownerPhone: '+6281234567890',
       ownerName: 'Bu Sri',
       loyaltyQrSlug: 'warung-123456781234',
+      dashboardToken: 'dash_12345678123412341234123456789abc',
     });
     expect(result).toEqual({ shop: createdShop, created: true });
   });

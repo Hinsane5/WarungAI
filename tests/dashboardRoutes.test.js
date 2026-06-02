@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const getShopByOwnerPhoneMock = vi.hoisted(() => vi.fn());
+const getShopByDashboardTokenMock = vi.hoisted(() => vi.fn());
 const getDashboardSummaryMock = vi.hoisted(() => vi.fn());
 const getSalesTrendMock = vi.hoisted(() => vi.fn());
 const getCategoryMixMock = vi.hoisted(() => vi.fn());
@@ -11,7 +11,7 @@ const getCreditScoresMock = vi.hoisted(() => vi.fn());
 const buildMonthlyExcelExportMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/services/analyticsService.js', () => ({
-  getShopByOwnerPhone: getShopByOwnerPhoneMock,
+  getShopByDashboardToken: getShopByDashboardTokenMock,
   getDashboardSummary: getDashboardSummaryMock,
   getSalesTrend: getSalesTrendMock,
   getCategoryMix: getCategoryMixMock,
@@ -27,7 +27,7 @@ const shop = { _id: 'shop-1', name: 'Warung Sri', tier: 'premium' };
 
 describe('dashboard routes', () => {
   beforeEach(() => {
-    getShopByOwnerPhoneMock.mockResolvedValue(shop);
+    getShopByDashboardTokenMock.mockResolvedValue(shop);
     getDashboardSummaryMock.mockResolvedValue({ omzet: { value: 10000 } });
     getSalesTrendMock.mockResolvedValue({ labels: ['Sen'], values: [10000] });
     getCategoryMixMock.mockResolvedValue([{ category: 'Makanan', value: 10000 }]);
@@ -53,27 +53,34 @@ describe('dashboard routes', () => {
     expect(response.text).toContain('/dashboard/js/app.js');
   });
 
-  it('requires ownerPhone for dashboard API requests', async () => {
+  it('requires a dashboard token for dashboard API requests', async () => {
     await request(app).get('/api/dashboard/summary').expect(401, {
       ok: false,
-      error: 'owner_phone_required',
+      error: 'dashboard_token_required',
     });
   });
 
-  it('returns summary JSON for an authorized owner link', async () => {
+  it('does not authorize dashboard data with only an owner phone', async () => {
+    await request(app).get('/api/dashboard/summary').query({ ownerPhone: '+628123' }).expect(401, {
+      ok: false,
+      error: 'dashboard_token_required',
+    });
+  });
+
+  it('returns summary JSON for an authorized token link', async () => {
     await request(app)
       .get('/api/dashboard/summary')
-      .query({ ownerPhone: '+628123' })
+      .query({ token: 'dash-test' })
       .expect(200, { omzet: { value: 10000 } });
 
-    expect(getShopByOwnerPhoneMock).toHaveBeenCalledWith('+628123');
+    expect(getShopByDashboardTokenMock).toHaveBeenCalledWith('dash-test');
     expect(getDashboardSummaryMock).toHaveBeenCalledWith(shop);
   });
 
   it('serves premium Excel export', async () => {
     const response = await request(app)
       .get('/api/dashboard/export')
-      .query({ ownerPhone: '+628123', month: '2026-06' })
+      .query({ token: 'dash-test', month: '2026-06' })
       .expect(200);
 
     expect(response.headers['content-type']).toContain('application/vnd.ms-excel');
@@ -90,7 +97,7 @@ describe('dashboard routes', () => {
 
     await request(app)
       .get('/api/dashboard/export')
-      .query({ ownerPhone: '+628123', month: '2026-06' })
+      .query({ token: 'dash-test', month: '2026-06' })
       .expect(403, { ok: false, error: 'premium_required' });
   });
 });

@@ -17,6 +17,7 @@ const shopSchema = new mongoose.Schema(
       koinBotBalance: { type: Number, default: 0 },
     },
     loyaltyQrSlug: { type: String, required: true, trim: true, unique: true },
+    dashboardToken: { type: String, required: true, trim: true, unique: true },
   },
   { timestamps: true },
 );

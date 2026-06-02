@@ -4,29 +4,76 @@ import { Kasbon } from '../models/Kasbon.js';
 import { Product } from '../models/Product.js';
 import { Shop } from '../models/Shop.js';
 import { Transaction } from '../models/Transaction.js';
-import { normalizePhone } from '../utils/phone.js';
 
 const MS_PER_DAY = 86_400_000;
 const DAY_LABELS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
-function startOfDay(date = new Date()) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
+function timeZoneForShop(shop) {
+  return shop.settings?.timezone ?? config.jobs.timezone ?? 'Asia/Jakarta';
+}
+
+function datePartsInTimeZone(date = new Date(), timeZone = 'Asia/Jakarta') {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+
+  return Object.fromEntries(
+    parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]),
+  );
+}
+
+function utcDateForTimeZoneParts({ year, month, day, hour = 0, minute = 0, second = 0 }, timeZone) {
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  const actual = datePartsInTimeZone(utcGuess, timeZone);
+  const desiredMs = Date.UTC(year, month - 1, day, hour, minute, second);
+  const actualMs = Date.UTC(
+    actual.year,
+    actual.month - 1,
+    actual.day,
+    actual.hour,
+    actual.minute,
+    actual.second,
+  );
+
+  return new Date(utcGuess.getTime() + desiredMs - actualMs);
+}
+
+function startOfDay(date = new Date(), timeZone = 'Asia/Jakarta') {
+  const { year, month, day } = datePartsInTimeZone(date, timeZone);
+  return utcDateForTimeZoneParts({ year, month, day }, timeZone);
 }
 
 function addDays(date, days) {
   const d = new Date(date);
-  d.setDate(d.getDate() + days);
+  d.setUTCDate(d.getUTCDate() + days);
   return d;
 }
 
-function monthRange(month, now = new Date()) {
+function dayLabel(date, timeZone) {
+  const { year, month, day } = datePartsInTimeZone(date, timeZone);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return DAY_LABELS[weekday];
+}
+
+function dayKey(date, timeZone) {
+  const { year, month, day } = datePartsInTimeZone(date, timeZone);
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function monthRange(month, now = new Date(), timeZone = 'Asia/Jakarta') {
   const match = String(month ?? '').match(/^(\d{4})-(\d{2})$/u);
-  const year = match ? Number(match[1]) : now.getFullYear();
-  const monthIndex = match ? Number(match[2]) - 1 : now.getMonth();
-  const from = new Date(year, monthIndex, 1);
-  const to = new Date(year, monthIndex + 1, 1);
+  const nowParts = datePartsInTimeZone(now, timeZone);
+  const year = match ? Number(match[1]) : nowParts.year;
+  const monthIndex = match ? Number(match[2]) - 1 : nowParts.month - 1;
+  const from = utcDateForTimeZoneParts({ year, month: monthIndex + 1, day: 1 }, timeZone);
+  const to = utcDateForTimeZoneParts({ year, month: monthIndex + 2, day: 1 }, timeZone);
   return { from, to, label: `${year}-${String(monthIndex + 1).padStart(2, '0')}` };
 }
 
@@ -54,19 +101,22 @@ function creditworthiness(customer) {
   return Math.max(0, Math.min(100, 100 - Math.round(risk / 20_000)));
 }
 
-function daysOverdue(dueDate, now = new Date()) {
+function daysOverdue(dueDate, now = new Date(), timeZone = 'Asia/Jakarta') {
   if (!dueDate) {
     return 0;
   }
-  return Math.max(0, Math.floor((startOfDay(now) - startOfDay(new Date(dueDate))) / MS_PER_DAY));
+  return Math.max(
+    0,
+    Math.floor((startOfDay(now, timeZone) - startOfDay(new Date(dueDate), timeZone)) / MS_PER_DAY),
+  );
 }
 
-export async function getShopByOwnerPhone(ownerPhone) {
-  const normalizedOwnerPhone = normalizePhone(ownerPhone);
-  if (!normalizedOwnerPhone) {
+export async function getShopByDashboardToken(token) {
+  const dashboardToken = String(token ?? '').trim();
+  if (!dashboardToken) {
     return null;
   }
-  return Shop.findOne({ ownerPhone: normalizedOwnerPhone });
+  return Shop.findOne({ dashboardToken });
 }
 
 async function committedSales({ shopId, from, to }) {
@@ -81,7 +131,8 @@ async function committedSales({ shopId, from, to }) {
 }
 
 export async function getDashboardSummary(shop, { now = new Date() } = {}) {
-  const today = startOfDay(now);
+  const timeZone = timeZoneForShop(shop);
+  const today = startOfDay(now, timeZone);
   const tomorrow = addDays(today, 1);
   const yesterday = addDays(today, -1);
 
@@ -111,7 +162,8 @@ export async function getDashboardSummary(shop, { now = new Date() } = {}) {
     omzet: { value: omzetToday, deltaPct: pctDelta(omzetToday, omzetYesterday), vs: 'kemarin' },
     piutang: {
       value: openKasbons.reduce((total, kasbon) => total + (kasbon.amount ?? 0), 0),
-      overdueCount: openKasbons.filter((kasbon) => daysOverdue(kasbon.dueDate, now) > 0).length,
+      overdueCount: openKasbons.filter((kasbon) => daysOverdue(kasbon.dueDate, now, timeZone) > 0)
+        .length,
     },
     loyalty: { count: customers.length, newToday },
     txnToday: {
@@ -122,14 +174,15 @@ export async function getDashboardSummary(shop, { now = new Date() } = {}) {
 }
 
 export async function getSalesTrend(shop, { days = 7, now = new Date() } = {}) {
+  const timeZone = timeZoneForShop(shop);
   const safeDays = Math.min(Math.max(Number(days) || 7, 1), 31);
-  const end = addDays(startOfDay(now), 1);
+  const end = addDays(startOfDay(now, timeZone), 1);
   const start = addDays(end, -safeDays);
   const sales = await committedSales({ shopId: shop._id, from: start, to: end });
   const totals = new Map();
 
   for (const txn of sales) {
-    const key = startOfDay(new Date(txn.committedAt)).toISOString();
+    const key = dayKey(new Date(txn.committedAt), timeZone);
     totals.set(key, (totals.get(key) ?? 0) + (txn.totalAmount ?? 0));
   }
 
@@ -137,8 +190,8 @@ export async function getSalesTrend(shop, { days = 7, now = new Date() } = {}) {
   const values = [];
   for (let i = 0; i < safeDays; i += 1) {
     const day = addDays(start, i);
-    labels.push(DAY_LABELS[day.getDay()]);
-    values.push(totals.get(day.toISOString()) ?? 0);
+    labels.push(dayLabel(day, timeZone));
+    values.push(totals.get(dayKey(day, timeZone)) ?? 0);
   }
 
   return { labels, values };
@@ -150,7 +203,7 @@ async function productMap(shopId) {
 }
 
 export async function getCategoryMix(shop, { now = new Date() } = {}) {
-  const end = addDays(startOfDay(now), 1);
+  const end = addDays(startOfDay(now, timeZoneForShop(shop)), 1);
   const start = addDays(end, -30);
   const [sales, products] = await Promise.all([
     committedSales({ shopId: shop._id, from: start, to: end }),
@@ -172,7 +225,7 @@ export async function getCategoryMix(shop, { now = new Date() } = {}) {
 }
 
 export async function getTopItems(shop, { now = new Date(), limit = 5 } = {}) {
-  const end = addDays(startOfDay(now), 1);
+  const end = addDays(startOfDay(now, timeZoneForShop(shop)), 1);
   const start = addDays(end, -30);
   const sales = await committedSales({ shopId: shop._id, from: start, to: end });
   const totals = new Map();
@@ -230,12 +283,13 @@ export async function getPredictiveRestock(shop) {
         urgency: urgent ? 'urgent' : 'watch',
       };
     })
-    .filter((item) => item.urgency === 'urgent' || item.daysToStockout != null)
+    .filter((item) => item.urgency === 'urgent')
     .sort((a, b) => (a.daysToStockout ?? 9999) - (b.daysToStockout ?? 9999))
     .slice(0, 6);
 }
 
 export async function getCreditScores(shop, { now = new Date() } = {}) {
+  const timeZone = timeZoneForShop(shop);
   const [openKasbons, customers] = await Promise.all([
     lean(Kasbon.find({ shopId: shop._id, status: 'open' })),
     lean(Customer.find({ shopId: shop._id })),
@@ -251,7 +305,10 @@ export async function getCreditScores(shop, { now = new Date() } = {}) {
       maxDaysOverdue: 0,
     };
     current.debt += kasbon.amount ?? 0;
-    current.maxDaysOverdue = Math.max(current.maxDaysOverdue, daysOverdue(kasbon.dueDate, now));
+    current.maxDaysOverdue = Math.max(
+      current.maxDaysOverdue,
+      daysOverdue(kasbon.dueDate, now, timeZone),
+    );
     grouped.set(key, current);
   }
 
@@ -272,7 +329,7 @@ export async function buildMonthlyExcelExport(shop, { month, now = new Date() } 
     return { ok: false, reason: 'premium_required' };
   }
 
-  const { from, to, label } = monthRange(month, now);
+  const { from, to, label } = monthRange(month, now, timeZoneForShop(shop));
   const transactions = await lean(
     Transaction.find({
       shopId: shop._id,

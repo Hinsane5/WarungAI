@@ -5,10 +5,14 @@ export {
   getDashboardSummary,
   getPredictiveRestock,
   getSalesTrend,
-  getShopByOwnerPhone,
+  getShopByDashboardToken,
   getTopItems,
 } from './analyticsService.js';
-export { findOrCreateByOwnerPhone, generateLoyaltyQrSlug } from './shopService.js';
+export {
+  findOrCreateByOwnerPhone,
+  generateDashboardToken,
+  generateLoyaltyQrSlug,
+} from './shopService.js';
 export { confirmPendingTransaction, handleTextPos } from './posService.js';
 export { learnAlias, resolveProduct } from './productService.js';
 export { getOrCreateSession, setSessionState } from './sessionService.js';

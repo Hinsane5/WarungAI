@@ -7,7 +7,7 @@ import {
   getDashboardSummary,
   getPredictiveRestock,
   getSalesTrend,
-  getShopByOwnerPhone,
+  getShopByDashboardToken,
   getTopItems,
 } from '../services/analyticsService.js';
 
@@ -17,14 +17,14 @@ const dashboardHtml = readFileSync(
 );
 
 async function resolveDashboardShop(req, res) {
-  const ownerPhone = req.query.ownerPhone;
+  const token = req.query.token;
 
-  if (!ownerPhone) {
-    res.status(401).json({ ok: false, error: 'owner_phone_required' });
+  if (!token) {
+    res.status(401).json({ ok: false, error: 'dashboard_token_required' });
     return null;
   }
 
-  const shop = await getShopByOwnerPhone(ownerPhone);
+  const shop = await getShopByDashboardToken(token);
 
   if (!shop) {
     res.status(404).json({ ok: false, error: 'shop_not_found' });

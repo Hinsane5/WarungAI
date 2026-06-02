@@ -11,12 +11,26 @@ export function generateLoyaltyQrSlug() {
   return `warung-${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 }
 
+export function generateDashboardToken() {
+  return `dash_${randomUUID().replaceAll('-', '')}`;
+}
+
+async function ensureDashboardToken(shop) {
+  if (shop && !shop.dashboardToken) {
+    shop.dashboardToken = generateDashboardToken();
+    if (typeof shop.save === 'function') {
+      await shop.save();
+    }
+  }
+  return shop;
+}
+
 export async function findOrCreateByOwnerPhone({ ownerPhone, ownerName }) {
   const normalizedOwnerPhone = normalizePhone(ownerPhone);
   const existingShop = await Shop.findOne({ ownerPhone: normalizedOwnerPhone });
 
   if (existingShop) {
-    return { shop: existingShop, created: false };
+    return { shop: await ensureDashboardToken(existingShop), created: false };
   }
 
   try {
@@ -25,6 +39,7 @@ export async function findOrCreateByOwnerPhone({ ownerPhone, ownerName }) {
       ownerPhone: normalizedOwnerPhone,
       ownerName,
       loyaltyQrSlug: generateLoyaltyQrSlug(),
+      dashboardToken: generateDashboardToken(),
     });
 
     return { shop, created: true };
@@ -39,6 +54,6 @@ export async function findOrCreateByOwnerPhone({ ownerPhone, ownerName }) {
       throw error;
     }
 
-    return { shop, created: false };
+    return { shop: await ensureDashboardToken(shop), created: false };
   }
 }
