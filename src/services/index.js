@@ -16,3 +16,12 @@ export {
   registerLoyaltyCustomer,
   resolveShopByLoyaltySlug,
 } from './loyaltyService.js';
+export { notifyOwner, sendCustomerBroadcast } from './broadcastService.js';
+export {
+  computeRfmForCustomer,
+  evaluateStock,
+  isRestockReminderDue,
+  predictCustomerRestocks,
+  promoForSegment,
+  segmentForRfm,
+} from './crmService.js';

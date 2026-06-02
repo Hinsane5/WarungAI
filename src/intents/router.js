@@ -20,7 +20,7 @@ const WELCOME_MESSAGE = [
 ].join('\n');
 
 async function handleAudioMessage({ shop, session, message }) {
-  if (!message.audioMediaId) {
+  if (!message.audioMediaId && !message.audioBuffer) {
     await sendText(
       message.from,
       'Voice note tidak terbaca. Tolong kirim ulang atau ketik transaksinya.',
@@ -31,7 +31,8 @@ async function handleAudioMessage({ shop, session, message }) {
   let transcription;
 
   try {
-    const audioBuffer = await downloadMedia(message.audioMediaId);
+    // Meta provides a media id to download; the n8n transport supplies the bytes directly.
+    const audioBuffer = message.audioBuffer ?? (await downloadMedia(message.audioMediaId));
     transcription = await transcribeOggOpus(audioBuffer);
   } catch (error) {
     logger.warn(

@@ -1,10 +1,11 @@
 import { config } from '../config/index.js';
+import { sendN8nText } from './n8n.js';
 
 function toWhatsAppPhone(phone) {
   return phone.startsWith('+') ? phone.slice(1) : phone;
 }
 
-async function sendWhatsAppMessage(payload) {
+async function sendCloudMessage(payload) {
   const url = `https://graph.facebook.com/${config.whatsapp.graphApiVersion}/${config.whatsapp.phoneNumberId}/messages`;
   const response = await fetch(url, {
     method: 'POST',
@@ -23,11 +24,21 @@ async function sendWhatsAppMessage(payload) {
   return response.json();
 }
 
-export async function sendText(to, body) {
-  return sendWhatsAppMessage({
+async function sendCloudText(to, body) {
+  return sendCloudMessage({
     messaging_product: 'whatsapp',
     to: toWhatsAppPhone(to),
     type: 'text',
     text: { body },
   });
+}
+
+// Single send facade. Dispatches to the configured transport so the rest of the
+// codebase (router, services, jobs) never needs to know which provider is active.
+export async function sendText(to, body) {
+  if (config.whatsapp.provider === 'n8n') {
+    return sendN8nText(to, body);
+  }
+
+  return sendCloudText(to, body);
 }

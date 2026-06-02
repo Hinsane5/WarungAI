@@ -1,6 +1,7 @@
 import { app } from './src/app.js';
 import { config } from './src/config/index.js';
 import { connectDb, registerDbShutdownHandlers } from './src/config/db.js';
+import { registerCronJobs } from './src/jobs/scheduler.js';
 import { logger } from './src/utils/logger.js';
 
 async function start() {
@@ -17,6 +18,7 @@ async function start() {
 
   try {
     await connectDb();
+    registerCronJobs();
   } catch (error) {
     logger.error({ err: error }, 'Startup failed');
     server.close(() => {

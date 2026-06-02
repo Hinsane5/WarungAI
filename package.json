@@ -18,7 +18,9 @@
     "db:inspect": "node scripts/inspect-db.mjs",
     "check:stt": "node scripts/check-stt.mjs",
     "db:reset": "rm -rf ./.local/mongo/* && echo 'Local DB wiped (restart db:start, then db:init).'",
-    "sim": "node scripts/simulate-webhook.mjs"
+    "sim": "node scripts/simulate-webhook.mjs",
+    "jobs:run": "node scripts/run-jobs.mjs",
+    "seed": "node scripts/seed-demo.mjs"
   },
   "dependencies": {
     "@google-cloud/speech": "7.3.1",
