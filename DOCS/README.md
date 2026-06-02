@@ -61,8 +61,10 @@ This `DOCS/` folder is the **single source of truth** for building WarungAI. Rea
 | [`TECH_STACK.md`](./TECH_STACK.md) | Technology choices, versions, env vars, proposal↔MVP mapping | Setting up the project |
 | [`DATA_MODEL.md`](./DATA_MODEL.md) | MongoDB collections, schemas, indexes, sample docs | Writing models/services |
 | [`AI_INTEGRATION.md`](./AI_INTEGRATION.md) | Prompts, extraction JSON contract, fallback logic, credit-scoring formula, RFM | Building the AI layer |
-| [`WHATSAPP_INTEGRATION.md`](./WHATSAPP_INTEGRATION.md) | Webhook setup, message/voice handling, confirmation (Y/T) flow, templates | Building messaging |
+| [`WHATSAPP_INTEGRATION.md`](./WHATSAPP_INTEGRATION.md) | Webhook setup, message/voice handling, confirmation (Y/T) flow, templates | Building messaging (Meta Cloud API path) |
+| [`N8N_INTEGRATION.md`](./N8N_INTEGRATION.md) | Alternative WhatsApp transport via n8n + an unofficial gateway (sidesteps Meta verification/country block); the `messaging` provider swap | Wiring WhatsApp via n8n |
 | [`DASHBOARD_UI_GUIDE.md`](./DASHBOARD_UI_GUIDE.md) | Visual + build spec for the owner web dashboard: design tokens, components, charts, data contracts, quality bar | Building `web/dashboard/` (Phase 8) |
+| [`MOCK_DATA_AND_DASHBOARD_TESTING.md`](./MOCK_DATA_AND_DASHBOARD_TESTING.md) | Verify the GCP pipeline + dashboard with seed/simulator data — **no WhatsApp needed**; `npm run seed` | Testing the flow & dashboard without WhatsApp |
 | [`PHASES.md`](./PHASES.md) | **The build roadmap.** Phase-by-phase tasks, deliverables, acceptance gates, agent checklists | Every coding session |
 | [`CONVENTIONS.md`](./CONVENTIONS.md) | Folder structure, naming, error handling, git, testing standards | Every coding session |
 | [`CLAUDE.md`](./CLAUDE.md) / [`AGENTS.md`](./AGENTS.md) | Operating instructions for AI coding agents working in this repo | Every coding session |
