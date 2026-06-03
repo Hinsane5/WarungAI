@@ -29,8 +29,14 @@ const ACTION_PATTERNS = [
 
 const SEGMENT_SPLIT_PATTERN = /\s*(?:,| dan | sama | terus | lalu )\s*/giu;
 const KNOWN_UNITS = new Set(['pcs', 'pc', 'dus', 'box', 'karton', 'galon', 'kg', 'gram', 'gr']);
-const ITEM_PATTERN =
-  /(?<qty>\d+(?:[.,]\d+)?)\s*(?<unit>[a-zA-Z]+)?\s+(?<name>.+?)(?:\s+(?:rp)?(?<price>\d[\d.]*)\s*)?$/iu;
+// Only match a real unit token here. A greedy `[a-zA-Z]+` would swallow the product
+// word (e.g. "telur") as a "unit" and then misread the trailing price as part of the
+// name ("telur 6000"). Restricting to known units keeps name + price separable.
+const UNIT_ALTERNATION = [...KNOWN_UNITS].join('|');
+const ITEM_PATTERN = new RegExp(
+  `(?<qty>\\d+(?:[.,]\\d+)?)\\s*(?:(?<unit>${UNIT_ALTERNATION})\\s+)?(?<name>.+?)(?:\\s+(?:rp)?(?<price>\\d[\\d.]*)\\s*)?$`,
+  'iu',
+);
 const KASBON_PATTERN =
   /^\s*kasbon\s+(?<customerRef>[^\d]+?)\s+(?<itemText>\d+(?:[.,]\d+)?\s*.*)$/iu;
 
