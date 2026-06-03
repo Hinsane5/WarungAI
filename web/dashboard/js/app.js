@@ -76,13 +76,13 @@ async function loadSummary() {
   setText('#shopName', data.shop.name || 'Warung');
   setText('#tierLabel', `${data.shop.tier || 'free'} tier`);
   setText('#omzetValue', rupiah(data.omzet.value));
-  setText('#omzetDelta', `↑ ${data.omzet.deltaPct}% vs ${data.omzet.vs}`);
+  setText('#omzetDelta', `+${data.omzet.deltaPct}% vs ${data.omzet.vs}`);
   setText('#piutangValue', rupiah(data.piutang.value));
-  setText('#piutangDelta', `⚠ ${data.piutang.overdueCount} jatuh tempo`);
+  setText('#piutangDelta', `${data.piutang.overdueCount} jatuh tempo`);
   setText('#loyaltyValue', String(data.loyalty.count));
-  setText('#loyaltyDelta', `↑ ${data.loyalty.newToday} baru hari ini`);
+  setText('#loyaltyDelta', `${data.loyalty.newToday} baru hari ini`);
   setText('#txnValue', String(data.txnToday.count));
-  setText('#txnDelta', `↑ ${data.txnToday.deltaPct}%`);
+  setText('#txnDelta', `+${data.txnToday.deltaPct}%`);
 }
 
 async function loadSalesTrend() {
