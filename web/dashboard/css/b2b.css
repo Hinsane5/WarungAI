@@ -1,0 +1,44 @@
+.b2b-subtitle {
+  margin: 6px 0 0;
+  color: var(--wa-ink-500);
+  font-weight: 600;
+}
+
+.b2b-topbar-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  color: #dcecff;
+  background: rgba(37, 99, 235, 0.28);
+  font-weight: 700;
+}
+
+.b2b-kpi {
+  grid-column: span 6;
+  border-left-color: var(--wa-info);
+}
+
+.b2b-kpi .kpi-card__value {
+  color: var(--wa-info);
+}
+
+.badge--info {
+  color: var(--wa-info);
+  background: var(--wa-info-bg);
+}
+
+.chart-box--compact {
+  height: 260px;
+}
+
+.d-none {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .b2b-kpi {
+    grid-column: span 12;
+  }
+}

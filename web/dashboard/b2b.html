@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WarungAI B2B Data</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/dashboard/css/tokens.css" />
+    <link rel="stylesheet" href="/dashboard/css/styles.css" />
+    <link rel="stylesheet" href="/dashboard/css/b2b.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script defer src="/dashboard/js/b2b.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__inner">
+        <div class="brand"><span class="brand__mark">W</span><span>WarungAI</span></div>
+        <nav>
+          <ul class="nav-pills">
+            <li><a id="dashboardNavLink" href="/dashboard">Dashboard</a></li>
+            <li><a id="chatNavLink" href="/dashboard/chat">Chat Bot</a></li>
+            <li><a class="active" href="/dashboard/b2b">B2B Data</a></li>
+            <li><a href="/dashboard">Pelanggan</a></li>
+            <li><a href="/dashboard">Laporan</a></li>
+          </ul>
+        </nav>
+        <div class="topbar__meta">
+          <span class="b2b-topbar-pill">Aggregate</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="canvas">
+      <section class="hero-row b2b-hero">
+        <div>
+          <p class="eyebrow">B2B Access</p>
+          <h1 class="shop-title">FMCG Regional Data</h1>
+          <p class="b2b-subtitle">Data agregat lintas warung untuk distributor dan principal.</p>
+        </div>
+        <div class="actions">
+          <select id="regionSelect" class="period-select" aria-label="Region">
+            <option value="Tangerang">Tangerang</option>
+            <option value="Jakarta">Jakarta</option>
+            <option value="Bogor">Bogor</option>
+            <option value="Depok">Depok</option>
+            <option value="Bekasi">Bekasi</option>
+          </select>
+          <input
+            id="dashboardToken"
+            class="owner-input"
+            autocomplete="off"
+            placeholder="dash_..."
+            aria-label="Dashboard token"
+          />
+        </div>
+      </section>
+
+      <section class="card-grid" aria-live="polite">
+        <article class="kpi-card b2b-kpi">
+          <p class="kpi-card__label">Titik Warung Aktif</p>
+          <p class="kpi-card__value" id="activeWarungValue">
+            <span class="skeleton d-block"></span>
+          </p>
+          <span class="badge badge--info" id="regionBadge">Region</span>
+        </article>
+        <article class="kpi-card b2b-kpi">
+          <p class="kpi-card__label">Rata-rata Turnover Rate</p>
+          <p class="kpi-card__value" id="turnoverAvgValue">
+            <span class="skeleton d-block"></span>
+          </p>
+          <span class="badge badge--success">hari per unit</span>
+        </article>
+
+        <article class="widget-card widget-card--full">
+          <div class="widget-card__header">
+            <h2 class="widget-card__title">📉 Tren Fluktuasi Harga Eceran</h2>
+            <span class="muted" id="trendCaption">Harga mingguan</span>
+          </div>
+          <div class="chart-box"><canvas id="priceTrendChart"></canvas></div>
+        </article>
+
+        <article class="widget-card widget-card--half">
+          <div class="widget-card__header">
+            <h2 class="widget-card__title">🏷️ Top Brand Volume Terjual</h2>
+          </div>
+          <div class="chart-box chart-box--compact"><canvas id="topBrandChart"></canvas></div>
+          <div id="topBrandEmpty" class="empty-state d-none">Belum ada data top brand.</div>
+        </article>
+
+        <article class="widget-card widget-card--half">
+          <div class="widget-card__header">
+            <h2 class="widget-card__title">🔁 Turnover Rate per Item</h2>
+          </div>
+          <div id="turnoverList" class="list"><div class="empty-state">Memuat turnover</div></div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

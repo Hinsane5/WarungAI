@@ -1,5 +1,9 @@
 export { sendChatMessage } from './chatController.js';
 export {
+  dashboardB2bPriceTrend,
+  dashboardB2bSummary,
+  dashboardB2bTopBrands,
+  dashboardB2bTurnover,
   dashboardCategoryMix,
   dashboardCreditScores,
   dashboardExport,
@@ -8,6 +12,7 @@ export {
   dashboardSummary,
   dashboardTopItems,
   renderDashboard,
+  renderDashboardB2b,
   renderDashboardChat,
 } from './dashboardController.js';
 export { registerLoyalty, renderLoyaltyPage } from './loyaltyController.js';

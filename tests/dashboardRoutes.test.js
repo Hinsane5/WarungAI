@@ -9,6 +9,10 @@ const getTopItemsMock = vi.hoisted(() => vi.fn());
 const getPredictiveRestockMock = vi.hoisted(() => vi.fn());
 const getCreditScoresMock = vi.hoisted(() => vi.fn());
 const buildMonthlyExcelExportMock = vi.hoisted(() => vi.fn());
+const getActiveWarungMock = vi.hoisted(() => vi.fn());
+const getTopBrandsMock = vi.hoisted(() => vi.fn());
+const getTurnoverByItemMock = vi.hoisted(() => vi.fn());
+const getRetailPriceTrendMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/services/analyticsService.js', () => ({
   getShopByDashboardToken: getShopByDashboardTokenMock,
@@ -19,6 +23,13 @@ vi.mock('../src/services/analyticsService.js', () => ({
   getPredictiveRestock: getPredictiveRestockMock,
   getCreditScores: getCreditScoresMock,
   buildMonthlyExcelExport: buildMonthlyExcelExportMock,
+}));
+
+vi.mock('../src/services/bigqueryService.js', () => ({
+  getActiveWarung: getActiveWarungMock,
+  getTopBrands: getTopBrandsMock,
+  getTurnoverByItem: getTurnoverByItemMock,
+  getRetailPriceTrend: getRetailPriceTrendMock,
 }));
 
 const { app } = await import('../src/app.js');
@@ -40,6 +51,35 @@ describe('dashboard routes', () => {
       contentType: 'application/vnd.ms-excel',
       body: '<Workbook />',
     });
+    getActiveWarungMock.mockResolvedValue({ value: '1245' });
+    getTopBrandsMock.mockResolvedValue([
+      {
+        productName: 'Indomie Goreng',
+        volume: { value: '45000' },
+        revenue: { value: '135000000' },
+      },
+    ]);
+    getTurnoverByItemMock.mockResolvedValue([
+      {
+        productName: 'Indomie Goreng',
+        unitsSold: { value: '45000' },
+        activeDays: { value: '54' },
+        daysPerUnit: { value: '1.2' },
+      },
+      {
+        productName: 'Aqua Galon',
+        unitsSold: { value: '1000' },
+        activeDays: { value: '20' },
+        daysPerUnit: { value: '2.3' },
+      },
+    ]);
+    getRetailPriceTrendMock.mockResolvedValue([
+      {
+        week: { value: '2026-05-25' },
+        productName: 'Minyak Goreng 1L',
+        avgPrice: { value: '16000' },
+      },
+    ]);
   });
 
   afterEach(() => {
@@ -52,6 +92,7 @@ describe('dashboard routes', () => {
     expect(response.text).toContain('WarungAI Dashboard');
     expect(response.text).toContain('/dashboard/js/app.js');
     expect(response.text).toContain('/dashboard/chat');
+    expect(response.text).toContain('/dashboard/b2b');
   });
 
   it('renders the dashboard chat page', async () => {
@@ -59,6 +100,13 @@ describe('dashboard routes', () => {
 
     expect(response.text).toContain('WarungAI Chat Bot');
     expect(response.text).toContain('/dashboard/js/chat.js');
+  });
+
+  it('renders the B2B data page', async () => {
+    const response = await request(app).get('/dashboard/b2b').expect(200);
+
+    expect(response.text).toContain('WarungAI B2B Data');
+    expect(response.text).toContain('/dashboard/js/b2b.js');
   });
 
   it('requires a dashboard token for dashboard API requests', async () => {
@@ -83,6 +131,67 @@ describe('dashboard routes', () => {
 
     expect(getShopByDashboardTokenMock).toHaveBeenCalledWith('dash-test');
     expect(getDashboardSummaryMock).toHaveBeenCalledWith(shop);
+  });
+
+  it('requires a dashboard token for B2B API requests', async () => {
+    await request(app).get('/api/dashboard/b2b/summary').expect(401, {
+      ok: false,
+      error: 'dashboard_token_required',
+    });
+  });
+
+  it('returns B2B summary from BigQuery data', async () => {
+    await request(app)
+      .get('/api/dashboard/b2b/summary')
+      .query({ token: 'dash-test', region: 'Tangerang' })
+      .expect(200, {
+        activeWarung: 1245,
+        avgTurnoverDays: 1.8,
+        region: 'Tangerang',
+      });
+
+    expect(getActiveWarungMock).toHaveBeenCalledWith({ region: 'Tangerang' });
+    expect(getTurnoverByItemMock).toHaveBeenCalledWith({ region: 'Tangerang' });
+  });
+
+  it('returns B2B top brands, turnover, and price trend data', async () => {
+    await request(app)
+      .get('/api/dashboard/b2b/top-brands')
+      .query({ token: 'dash-test', region: 'Tangerang', limit: 3 })
+      .expect(200, [{ productName: 'Indomie Goreng', volume: 45000, revenue: 135000000 }]);
+
+    await request(app)
+      .get('/api/dashboard/b2b/turnover')
+      .query({ token: 'dash-test', region: 'Tangerang' })
+      .expect(200, [
+        { productName: 'Indomie Goreng', unitsSold: 45000, activeDays: 54, daysPerUnit: 1.2 },
+        { productName: 'Aqua Galon', unitsSold: 1000, activeDays: 20, daysPerUnit: 2.3 },
+      ]);
+
+    await request(app)
+      .get('/api/dashboard/b2b/price-trend')
+      .query({ token: 'dash-test', region: 'Tangerang', productName: 'Minyak Goreng 1L' })
+      .expect(200, [{ week: '2026-05-25', productName: 'Minyak Goreng 1L', avgPrice: 16000 }]);
+  });
+
+  it('returns empty B2B data when BigQuery has no rows', async () => {
+    getActiveWarungMock.mockResolvedValueOnce(0);
+    getTurnoverByItemMock.mockResolvedValue([]);
+    getTopBrandsMock.mockResolvedValue([]);
+
+    await request(app)
+      .get('/api/dashboard/b2b/summary')
+      .query({ token: 'dash-test', region: 'Tangerang' })
+      .expect(200, {
+        activeWarung: 0,
+        avgTurnoverDays: 0,
+        region: 'Tangerang',
+      });
+
+    await request(app)
+      .get('/api/dashboard/b2b/top-brands')
+      .query({ token: 'dash-test', region: 'Tangerang' })
+      .expect(200, []);
   });
 
   it('serves premium Excel export', async () => {

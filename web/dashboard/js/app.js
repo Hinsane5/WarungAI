@@ -4,6 +4,7 @@ const params = new URLSearchParams(window.location.search);
 const tokenInput = document.querySelector('#dashboardToken');
 const exportButton = document.querySelector('#exportButton');
 const chatNavLink = document.querySelector('#chatNavLink');
+const b2bNavLink = document.querySelector('#b2bNavLink');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 let salesChart;
 let categoryChart;
@@ -15,6 +16,7 @@ function syncTokenLinks() {
   chatNavLink.href = token
     ? `/dashboard/chat?${new URLSearchParams({ token })}`
     : '/dashboard/chat';
+  b2bNavLink.href = token ? `/dashboard/b2b?${new URLSearchParams({ token })}` : '/dashboard/b2b';
 }
 
 syncTokenLinks();
