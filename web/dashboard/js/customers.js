@@ -8,6 +8,7 @@ const customerCountLabel = document.querySelector('#customerCountLabel');
 const dashboardNavLink = document.querySelector('#dashboardNavLink');
 const chatNavLink = document.querySelector('#chatNavLink');
 const productsNavLink = document.querySelector('#productsNavLink');
+const roleSwitchLink = document.querySelector('#roleSwitchLink');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 let customers = [];
 
@@ -45,6 +46,7 @@ function syncLinks() {
   setNavHref(dashboardNavLink, '/dashboard', token);
   setNavHref(chatNavLink, '/dashboard/chat', token);
   setNavHref(productsNavLink, '/dashboard/products', token);
+  setNavHref(roleSwitchLink, '/', token);
 }
 
 function badgeClass(kind) {

@@ -9,6 +9,7 @@ const productCountLabel = document.querySelector('#productCountLabel');
 const dashboardNavLink = document.querySelector('#dashboardNavLink');
 const chatNavLink = document.querySelector('#chatNavLink');
 const customersNavLink = document.querySelector('#customersNavLink');
+const roleSwitchLink = document.querySelector('#roleSwitchLink');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 
 tokenInput.value = dashboardToken;
@@ -35,6 +36,7 @@ function syncLinks() {
   setNavHref(dashboardNavLink, '/dashboard', token);
   setNavHref(chatNavLink, '/dashboard/chat', token);
   setNavHref(customersNavLink, '/dashboard/customers', token);
+  setNavHref(roleSwitchLink, '/', token);
 }
 
 function query() {

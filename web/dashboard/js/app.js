@@ -6,6 +6,7 @@ const exportButton = document.querySelector('#exportButton');
 const chatNavLink = document.querySelector('#chatNavLink');
 const productsNavLink = document.querySelector('#productsNavLink');
 const customersNavLink = document.querySelector('#customersNavLink');
+const roleSwitchLink = document.querySelector('#roleSwitchLink');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 let salesChart;
 let categoryChart;
@@ -27,6 +28,7 @@ function syncTokenLinks() {
   setNavHref(chatNavLink, '/dashboard/chat', token);
   setNavHref(productsNavLink, '/dashboard/products', token);
   setNavHref(customersNavLink, '/dashboard/customers', token);
+  setNavHref(roleSwitchLink, '/', token);
 }
 
 syncTokenLinks();

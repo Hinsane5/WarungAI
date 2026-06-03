@@ -49,6 +49,15 @@ select {
   background: rgba(255, 255, 255, 0.14);
 }
 
+.brand__logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+  padding: 2px;
+}
+
 .nav-pills {
   display: flex;
   align-items: center;
