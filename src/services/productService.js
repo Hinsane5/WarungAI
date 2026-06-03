@@ -47,6 +47,12 @@ async function productsForShop(shopId) {
   return typeof sorted.lean === 'function' ? sorted.lean() : sorted;
 }
 
+async function productsForResolution(shopId, session) {
+  const query = Product.find({ shopId });
+  const scopedQuery = session && typeof query.session === 'function' ? query.session(session) : query;
+  return scopedQuery;
+}
+
 export async function listDashboardProducts(shop) {
   const products = await productsForShop(shop._id);
   return products.map(toDashboardProduct);
@@ -87,25 +93,43 @@ export async function createDashboardProduct(shop, input) {
 }
 
 export async function resolveProduct({ shopId, rawName, unit }, options = {}) {
-  const products = await Product.find({ shopId }).session?.(options.session);
+  const products = await productsForResolution(shopId, options.session);
   const product = products.find((candidate) => productMatches(candidate, rawName));
 
   if (product) {
     return { product, created: false, rawName };
   }
 
-  const createdProduct = await Product.create(
-    [
-      {
-        shopId,
-        name: titleCase(rawName),
-        aliases: [normalizeName(rawName)],
-        unit,
-        stock: 0,
-      },
-    ],
-    options.session ? { session: options.session } : undefined,
-  );
+  let createdProduct;
+  try {
+    createdProduct = await Product.create(
+      [
+        {
+          shopId,
+          name: titleCase(rawName),
+          aliases: [normalizeName(rawName)],
+          unit,
+          stock: 0,
+        },
+      ],
+      options.session ? { session: options.session } : undefined,
+    );
+  } catch (error) {
+    if (error?.code !== 11000) {
+      throw error;
+    }
+
+    const refreshedProducts = await productsForResolution(shopId, options.session);
+    const refreshedProduct = refreshedProducts.find((candidate) =>
+      productMatches(candidate, rawName),
+    );
+
+    if (!refreshedProduct) {
+      throw error;
+    }
+
+    return { product: refreshedProduct, created: false, rawName };
+  }
 
   return { product: createdProduct[0], created: true, rawName };
 }

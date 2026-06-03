@@ -10,7 +10,7 @@ vi.mock('../src/models/Product.js', () => ({
   },
 }));
 
-const { createDashboardProduct, listDashboardProducts } =
+const { createDashboardProduct, listDashboardProducts, resolveProduct } =
   await import('../src/services/productService.js');
 
 const shop = { _id: 'shop-1' };
@@ -117,5 +117,32 @@ describe('productService dashboard catalog', () => {
         reorderPoint: 10,
       }),
     ).resolves.toEqual({ ok: false, reason: 'duplicate_product' });
+  });
+
+  it('re-fetches products when chat product creation loses a duplicate-key race', async () => {
+    const product = {
+      _id: 'p3',
+      name: 'Aqua Galon',
+      aliases: ['aqua galon'],
+      unit: 'galon',
+    };
+    productFindMock.mockResolvedValueOnce([]).mockResolvedValueOnce([product]);
+    productCreateMock.mockRejectedValue(Object.assign(new Error('duplicate'), { code: 11000 }));
+
+    await expect(
+      resolveProduct({ shopId: 'shop-1', rawName: 'aqua galon', unit: 'galon' }),
+    ).resolves.toEqual({ product, created: false, rawName: 'aqua galon' });
+
+    expect(productFindMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('rethrows duplicate-key races when the created product cannot be found', async () => {
+    const error = Object.assign(new Error('duplicate'), { code: 11000 });
+    productFindMock.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    productCreateMock.mockRejectedValue(error);
+
+    await expect(
+      resolveProduct({ shopId: 'shop-1', rawName: 'aqua galon', unit: 'galon' }),
+    ).rejects.toBe(error);
   });
 });
