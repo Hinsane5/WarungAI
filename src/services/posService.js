@@ -36,20 +36,26 @@ function transactionTypeForItems(items) {
   return 'adjustment';
 }
 
-function priceForItem(extractedItem, product) {
-  if (extractedItem.unitPrice != null) {
-    return extractedItem.unitPrice;
-  }
-
-  if (extractedItem.action === 'sale') {
-    return product.sellPrice ?? 0;
-  }
-
-  return product.costPrice ?? 0;
-}
-
 function lineTotal(qty, unitPrice) {
   return Math.round(qty * unitPrice);
+}
+
+// A typed trailing number is the TOTAL paid for the whole quantity — "3 telur 6000"
+// means Rp6.000 for all 3 (Rp2.000 each), not Rp6.000 each. When no number is given,
+// fall back to the product's set price as the per-unit price (so "beli 3 telur" with a
+// priced product auto-uses it).
+function resolveLine(extractedItem, product) {
+  const qty = extractedItem.qty ?? 0;
+
+  if (extractedItem.unitPrice != null) {
+    const total = Math.round(extractedItem.unitPrice);
+    const unitPrice = qty > 0 ? Math.round(total / qty) : total;
+    return { unitPrice, lineTotal: total };
+  }
+
+  const setUnitPrice =
+    extractedItem.action === 'sale' ? (product.sellPrice ?? 0) : (product.costPrice ?? 0);
+  return { unitPrice: setUnitPrice, lineTotal: lineTotal(qty, setUnitPrice) };
 }
 
 function cashDeltaForItems(items) {
@@ -109,7 +115,7 @@ async function buildPendingItems(shopId, extractedItems, options = {}) {
       },
       options,
     );
-    const unitPrice = priceForItem(extractedItem, product);
+    const { unitPrice, lineTotal: itemTotal } = resolveLine(extractedItem, product);
 
     resolvedProducts.push({ product, rawName });
     items.push({
@@ -120,7 +126,7 @@ async function buildPendingItems(shopId, extractedItems, options = {}) {
       unit: extractedItem.unit ?? product.unit,
       action: extractedItem.action,
       unitPrice,
-      lineTotal: lineTotal(extractedItem.qty, unitPrice),
+      lineTotal: itemTotal,
     });
   }
 
