@@ -21,8 +21,10 @@ function isRateLimitError(error) {
 
 const EXTRACT_PROMPT = readFileSync(new URL('./prompts/extract.v1.md', import.meta.url), 'utf8');
 const ACTION_PATTERNS = [
-  { action: 'stock_in', pattern: /\b(masuk|beli|restock|tambah)\b/giu },
-  { action: 'sale', pattern: /\b(laku|jual|terjual|keluar|belanja)\b/giu },
+  // stock_in = barang masuk / kulakan by the owner.
+  { action: 'stock_in', pattern: /\b(masuk|restock|kulak|kulakan|tambah)\b/giu },
+  // sale = barang keluar / a customer buying (beli, belanja, ambil) — stock goes down.
+  { action: 'sale', pattern: /\b(laku|jual|terjual|keluar|beli|belanja|ambil)\b/giu },
 ];
 
 const SEGMENT_SPLIT_PATTERN = /\s*(?:,| dan | sama | terus | lalu )\s*/giu;
