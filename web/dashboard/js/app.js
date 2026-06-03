@@ -1,4 +1,4 @@
-/* global Chart, URLSearchParams, document, localStorage, window */
+/* global Chart, URLSearchParams, document, localStorage, window, setInterval */
 
 const params = new URLSearchParams(window.location.search);
 const tokenInput = document.querySelector('#dashboardToken');
@@ -75,6 +75,12 @@ async function loadSummary() {
 
 async function loadSalesTrend() {
   const data = await api('/api/dashboard/sales-trend');
+  if (salesChart) {
+    salesChart.data.labels = data.labels;
+    salesChart.data.datasets[0].data = data.values;
+    salesChart.update();
+    return;
+  }
   const ctx = document.querySelector('#salesTrend');
   const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 260);
   gradient.addColorStop(0, 'rgba(79,201,127,0.22)');
@@ -122,32 +128,37 @@ async function loadCategoryAndTopItems() {
     api('/api/dashboard/category-mix'),
     api('/api/dashboard/top-items'),
   ]);
-  const ctx = document.querySelector('#categoryMix');
-  categoryChart?.destroy();
-  categoryChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: categories.map((item) => item.category),
-      datasets: [
-        {
-          data: categories.map((item) => item.value),
-          backgroundColor: ['#14443A', '#2E8B68', '#4FC97F', '#E8E2D0'],
-          borderColor: '#fff',
-          borderWidth: 3,
-        },
-      ],
-    },
-    options: {
-      cutout: '68%',
-      plugins: {
-        legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true } },
-        tooltip: {
-          callbacks: { label: (context) => `${context.label}: ${rupiah(context.parsed)}` },
-        },
+  if (categoryChart) {
+    categoryChart.data.labels = categories.map((item) => item.category);
+    categoryChart.data.datasets[0].data = categories.map((item) => item.value);
+    categoryChart.update();
+  } else {
+    const ctx = document.querySelector('#categoryMix');
+    categoryChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: categories.map((item) => item.category),
+        datasets: [
+          {
+            data: categories.map((item) => item.value),
+            backgroundColor: ['#14443A', '#2E8B68', '#4FC97F', '#E8E2D0'],
+            borderColor: '#fff',
+            borderWidth: 3,
+          },
+        ],
       },
-      maintainAspectRatio: false,
-    },
-  });
+      options: {
+        cutout: '68%',
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true } },
+          tooltip: {
+            callbacks: { label: (context) => `${context.label}: ${rupiah(context.parsed)}` },
+          },
+        },
+        maintainAspectRatio: false,
+      },
+    });
+  }
 
   renderRows(
     '#topItems',
@@ -219,4 +230,29 @@ exportButton.addEventListener('click', () => {
 
 loadDashboard().catch(() => {
   document.querySelector('#shopName').textContent = 'Dashboard belum tersedia';
+});
+
+// Auto-refresh: keep the dashboard in sync with the bot without a manual reload.
+const REFRESH_MS = 12000;
+let refreshing = false;
+
+async function refreshDashboard() {
+  if (refreshing || document.hidden || !tokenInput.value.trim()) {
+    return;
+  }
+  refreshing = true;
+  try {
+    await loadDashboard();
+  } catch {
+    // ignore transient refresh errors; the next tick will retry
+  } finally {
+    refreshing = false;
+  }
+}
+
+setInterval(refreshDashboard, REFRESH_MS);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    refreshDashboard();
+  }
 });
