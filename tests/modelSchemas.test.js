@@ -20,7 +20,7 @@ describe('Mongoose model schemas', () => {
   });
 
   it('defines product lookup indexes', () => {
-    expect(hasIndex(Product, { shopId: 1, name: 1 })).toBe(true);
+    expect(hasIndex(Product, { shopId: 1, name: 1 }, { unique: true })).toBe(true);
     expect(hasIndex(Product, { name: 'text', aliases: 'text' })).toBe(true);
   });
 

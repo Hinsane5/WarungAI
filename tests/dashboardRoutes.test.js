@@ -15,6 +15,7 @@ const getTurnoverByItemMock = vi.hoisted(() => vi.fn());
 const getRetailPriceTrendMock = vi.hoisted(() => vi.fn());
 const listDashboardProductsMock = vi.hoisted(() => vi.fn());
 const createDashboardProductMock = vi.hoisted(() => vi.fn());
+const listDashboardCustomersMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/services/analyticsService.js', () => ({
   getShopByDashboardToken: getShopByDashboardTokenMock,
@@ -25,6 +26,7 @@ vi.mock('../src/services/analyticsService.js', () => ({
   getPredictiveRestock: getPredictiveRestockMock,
   getCreditScores: getCreditScoresMock,
   buildMonthlyExcelExport: buildMonthlyExcelExportMock,
+  listDashboardCustomers: listDashboardCustomersMock,
 }));
 
 vi.mock('../src/services/bigqueryService.js', () => ({
@@ -101,6 +103,19 @@ describe('dashboard routes', () => {
       },
     ]);
     createDashboardProductMock.mockResolvedValue({ ok: true, id: 'product-2' });
+    listDashboardCustomersMock.mockResolvedValue([
+      {
+        id: 'customer-1',
+        name: 'Sari',
+        phone: '+628111',
+        points: 7,
+        stamps: 7,
+        segment: 'champion',
+        outstandingKasbon: 0,
+        creditBand: 'good',
+        creditScore: 100,
+      },
+    ]);
   });
 
   afterEach(() => {
@@ -135,6 +150,13 @@ describe('dashboard routes', () => {
 
     expect(response.text).toContain('WarungAI Produk');
     expect(response.text).toContain('/dashboard/js/products.js');
+  });
+
+  it('renders the customers page', async () => {
+    const response = await request(app).get('/dashboard/customers').expect(200);
+
+    expect(response.text).toContain('WarungAI Pelanggan');
+    expect(response.text).toContain('/dashboard/js/customers.js');
   });
 
   it('requires a dashboard token for dashboard API requests', async () => {
@@ -308,6 +330,34 @@ describe('dashboard routes', () => {
       .query({ token: 'dash-test' })
       .send({ name: 'Indomie Goreng', stock: 1 })
       .expect(409, { ok: false, error: 'duplicate_product' });
+  });
+
+  it('requires a dashboard token for customer API requests', async () => {
+    await request(app).get('/api/dashboard/customers').expect(401, {
+      ok: false,
+      error: 'dashboard_token_required',
+    });
+  });
+
+  it('lists dashboard customers for the token shop', async () => {
+    await request(app)
+      .get('/api/dashboard/customers')
+      .query({ token: 'dash-test' })
+      .expect(200, [
+        {
+          id: 'customer-1',
+          name: 'Sari',
+          phone: '+628111',
+          points: 7,
+          stamps: 7,
+          segment: 'champion',
+          outstandingKasbon: 0,
+          creditBand: 'good',
+          creditScore: 100,
+        },
+      ]);
+
+    expect(listDashboardCustomersMock).toHaveBeenCalledWith(shop);
   });
 
   it('serves premium Excel export', async () => {

@@ -10,6 +10,7 @@ import {
   getSalesTrend,
   getShopByDashboardToken,
   getTopItems,
+  listDashboardCustomers,
 } from '../services/analyticsService.js';
 import {
   getActiveWarung,
@@ -27,6 +28,10 @@ const chatHtml = readFileSync(new URL('../../web/dashboard/chat.html', import.me
 const b2bHtml = readFileSync(new URL('../../web/dashboard/b2b.html', import.meta.url), 'utf8');
 const productsHtml = readFileSync(
   new URL('../../web/dashboard/products.html', import.meta.url),
+  'utf8',
+);
+const customersHtml = readFileSync(
+  new URL('../../web/dashboard/customers.html', import.meta.url),
   'utf8',
 );
 
@@ -121,6 +126,11 @@ export function renderDashboardB2b(_req, res) {
 export function renderDashboardProducts(_req, res) {
   res.set('Cache-Control', 'public, max-age=300');
   res.status(200).type('html').send(productsHtml);
+}
+
+export function renderDashboardCustomers(_req, res) {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.status(200).type('html').send(customersHtml);
 }
 
 export async function dashboardSummary(req, res) {
@@ -270,6 +280,16 @@ export async function dashboardCreateProduct(req, res) {
     }
 
     return res.status(200).json(result);
+  } catch (error) {
+    return handleDashboardError(req, res, error);
+  }
+}
+
+export async function dashboardCustomers(req, res) {
+  try {
+    const shop = await resolveDashboardShop(req, res);
+    if (!shop) return null;
+    return res.status(200).json(await listDashboardCustomers(shop));
   } catch (error) {
     return handleDashboardError(req, res, error);
   }

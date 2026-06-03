@@ -101,4 +101,21 @@ describe('productService dashboard catalog', () => {
       reorderPoint: 10,
     });
   });
+
+  it('returns duplicate when MongoDB unique index wins a create race', async () => {
+    productFindMock.mockResolvedValue([]);
+    productCreateMock.mockRejectedValue(Object.assign(new Error('duplicate'), { code: 11000 }));
+
+    await expect(
+      createDashboardProduct(shop, {
+        name: 'Milo 3in1',
+        category: 'Minuman',
+        unit: 'sachet',
+        stock: 40,
+        sellPrice: 2000,
+        costPrice: 1600,
+        reorderPoint: 10,
+      }),
+    ).resolves.toEqual({ ok: false, reason: 'duplicate_product' });
+  });
 });

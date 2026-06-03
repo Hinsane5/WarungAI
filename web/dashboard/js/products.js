@@ -9,6 +9,7 @@ const productCountLabel = document.querySelector('#productCountLabel');
 const dashboardNavLink = document.querySelector('#dashboardNavLink');
 const chatNavLink = document.querySelector('#chatNavLink');
 const b2bNavLink = document.querySelector('#b2bNavLink');
+const customersNavLink = document.querySelector('#customersNavLink');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 
 tokenInput.value = dashboardToken;
@@ -27,6 +28,9 @@ function syncLinks() {
     ? `/dashboard/chat?${new URLSearchParams({ token })}`
     : '/dashboard/chat';
   b2bNavLink.href = token ? `/dashboard/b2b?${new URLSearchParams({ token })}` : '/dashboard/b2b';
+  customersNavLink.href = token
+    ? `/dashboard/customers?${new URLSearchParams({ token })}`
+    : '/dashboard/customers';
 }
 
 function query() {

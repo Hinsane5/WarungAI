@@ -7,6 +7,7 @@ export {
   getSalesTrend,
   getShopByDashboardToken,
   getTopItems,
+  listDashboardCustomers,
 } from './analyticsService.js';
 export {
   findOrCreateByOwnerPhone,

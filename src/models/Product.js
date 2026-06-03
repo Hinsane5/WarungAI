@@ -17,7 +17,7 @@ const productSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-productSchema.index({ shopId: 1, name: 1 });
+productSchema.index({ shopId: 1, name: 1 }, { unique: true });
 productSchema.index({ name: 'text', aliases: 'text' });
 
 export const Product = mongoose.models.Product ?? mongoose.model('Product', productSchema);

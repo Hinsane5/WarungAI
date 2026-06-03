@@ -6,6 +6,7 @@ import {
   renderDashboard,
   renderDashboardB2b,
   renderDashboardChat,
+  renderDashboardCustomers,
   renderDashboardProducts,
 } from '../controllers/dashboardController.js';
 
@@ -16,4 +17,5 @@ dashboardRouter.get('/dashboard', renderDashboard);
 dashboardRouter.get('/dashboard/chat', renderDashboardChat);
 dashboardRouter.get('/dashboard/b2b', renderDashboardB2b);
 dashboardRouter.get('/dashboard/products', renderDashboardProducts);
+dashboardRouter.get('/dashboard/customers', renderDashboardCustomers);
 dashboardRouter.use('/dashboard', express.static(dashboardAssetsPath, { index: false }));

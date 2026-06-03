@@ -324,6 +324,36 @@ export async function getCreditScores(shop, { now = new Date() } = {}) {
     .sort((a, b) => a.score - b.score);
 }
 
+export async function listDashboardCustomers(shop) {
+  const [customers, openKasbons] = await Promise.all([
+    lean(Customer.find({ shopId: shop._id })),
+    lean(Kasbon.find({ shopId: shop._id, status: 'open' })),
+  ]);
+  const debtByCustomerId = new Map();
+
+  for (const kasbon of openKasbons) {
+    const key = String(kasbon.customerId);
+    debtByCustomerId.set(key, (debtByCustomerId.get(key) ?? 0) + (kasbon.amount ?? 0));
+  }
+
+  return customers
+    .map((customer) => {
+      const id = String(customer._id);
+      return {
+        id,
+        name: customer.name ?? 'Pelanggan',
+        phone: customer.phone ?? '',
+        points: customer.loyalty?.points ?? 0,
+        stamps: customer.loyalty?.stamps ?? 0,
+        segment: customer.rfm?.segment ?? 'unsegmented',
+        outstandingKasbon: debtByCustomerId.get(id) ?? 0,
+        creditBand: customer.creditScore?.band ?? 'good',
+        creditScore: creditworthiness(customer),
+      };
+    })
+    .sort((a, b) => b.outstandingKasbon - a.outstandingKasbon || a.name.localeCompare(b.name));
+}
+
 export async function buildMonthlyExcelExport(shop, { month, now = new Date() } = {}) {
   if (shop.tier !== 'premium') {
     return { ok: false, reason: 'premium_required' };

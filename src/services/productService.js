@@ -63,17 +63,25 @@ export async function createDashboardProduct(shop, input) {
   }
 
   const normalizedName = normalizeName(input.name);
-  const product = await Product.create({
-    shopId: shop._id,
-    name: titleCase(input.name),
-    aliases: [normalizedName],
-    unit: input.unit,
-    stock: input.stock,
-    sellPrice: input.sellPrice,
-    costPrice: input.costPrice,
-    category: input.category,
-    reorderPoint: input.reorderPoint,
-  });
+  let product;
+  try {
+    product = await Product.create({
+      shopId: shop._id,
+      name: titleCase(input.name),
+      aliases: [normalizedName],
+      unit: input.unit,
+      stock: input.stock,
+      sellPrice: input.sellPrice,
+      costPrice: input.costPrice,
+      category: input.category,
+      reorderPoint: input.reorderPoint,
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return { ok: false, reason: 'duplicate_product' };
+    }
+    throw error;
+  }
 
   return { ok: true, id: String(product._id) };
 }

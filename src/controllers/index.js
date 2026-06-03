@@ -6,6 +6,7 @@ export {
   dashboardB2bTurnover,
   dashboardCategoryMix,
   dashboardCreateProduct,
+  dashboardCustomers,
   dashboardCreditScores,
   dashboardExport,
   dashboardPredictiveRestock,
@@ -16,6 +17,7 @@ export {
   renderDashboard,
   renderDashboardB2b,
   renderDashboardChat,
+  renderDashboardCustomers,
   renderDashboardProducts,
 } from './dashboardController.js';
 export { registerLoyalty, renderLoyaltyPage } from './loyaltyController.js';

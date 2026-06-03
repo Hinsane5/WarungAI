@@ -42,6 +42,7 @@ const {
   getSalesTrend,
   getShopByDashboardToken,
   getTopItems,
+  listDashboardCustomers,
 } = await import('../src/services/analyticsService.js');
 
 const shop = {
@@ -196,6 +197,65 @@ describe('analyticsService', () => {
       { name: 'Indomie', qty: 2, value: 10000 },
       { name: 'Aqua', qty: 1, value: 5000 },
     ]);
+  });
+
+  it('lists customers with loyalty, RFM segment, kasbon sum, and credit band', async () => {
+    customerFindMock.mockReturnValueOnce(
+      queryResult([
+        {
+          _id: 'customer-1',
+          name: 'Sari',
+          phone: '+628111',
+          loyalty: { points: 7, stamps: 7 },
+          rfm: { segment: 'champion' },
+          creditScore: { value: 400000, band: 'watch' },
+        },
+        {
+          _id: 'customer-2',
+          name: 'Budi',
+          phone: '+628222',
+          loyalty: { points: 1, stamps: 1 },
+          rfm: { segment: 'at_risk' },
+          creditScore: { value: 0, band: 'good' },
+        },
+      ]),
+    );
+    kasbonFindMock.mockReturnValueOnce(
+      queryResult([
+        { customerId: 'customer-1', amount: 125000, status: 'open' },
+        { customerId: 'customer-1', amount: 25000, status: 'open' },
+        { customerId: 'customer-2', amount: 5000, status: 'open' },
+      ]),
+    );
+
+    const rows = await listDashboardCustomers(shop);
+
+    expect(rows).toEqual([
+      {
+        id: 'customer-1',
+        name: 'Sari',
+        phone: '+628111',
+        points: 7,
+        stamps: 7,
+        segment: 'champion',
+        outstandingKasbon: 150000,
+        creditBand: 'watch',
+        creditScore: 80,
+      },
+      {
+        id: 'customer-2',
+        name: 'Budi',
+        phone: '+628222',
+        points: 1,
+        stamps: 1,
+        segment: 'at_risk',
+        outstandingKasbon: 5000,
+        creditBand: 'good',
+        creditScore: 100,
+      },
+    ]);
+    expect(customerFindMock).toHaveBeenCalledWith({ shopId: shop._id });
+    expect(kasbonFindMock).toHaveBeenCalledWith({ shopId: shop._id, status: 'open' });
   });
 
   it('blocks monthly Excel export for free-tier shops', async () => {
