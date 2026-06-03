@@ -4,7 +4,6 @@ const params = new URLSearchParams(window.location.search);
 const tokenInput = document.querySelector('#dashboardToken');
 const exportButton = document.querySelector('#exportButton');
 const chatNavLink = document.querySelector('#chatNavLink');
-const b2bNavLink = document.querySelector('#b2bNavLink');
 const productsNavLink = document.querySelector('#productsNavLink');
 const customersNavLink = document.querySelector('#customersNavLink');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
@@ -13,18 +12,21 @@ let categoryChart;
 
 tokenInput.value = dashboardToken;
 
+function setNavHref(link, path, token) {
+  if (!link) {
+    return;
+  }
+  link.href = token ? `${path}?${new URLSearchParams({ token })}` : path;
+}
+
 function syncTokenLinks() {
   const token = tokenInput.value.trim();
-  chatNavLink.href = token
-    ? `/dashboard/chat?${new URLSearchParams({ token })}`
-    : '/dashboard/chat';
-  b2bNavLink.href = token ? `/dashboard/b2b?${new URLSearchParams({ token })}` : '/dashboard/b2b';
-  productsNavLink.href = token
-    ? `/dashboard/products?${new URLSearchParams({ token })}`
-    : '/dashboard/products';
-  customersNavLink.href = token
-    ? `/dashboard/customers?${new URLSearchParams({ token })}`
-    : '/dashboard/customers';
+  if (token) {
+    localStorage.setItem('warungai.dashboardToken', token);
+  }
+  setNavHref(chatNavLink, '/dashboard/chat', token);
+  setNavHref(productsNavLink, '/dashboard/products', token);
+  setNavHref(customersNavLink, '/dashboard/customers', token);
 }
 
 syncTokenLinks();

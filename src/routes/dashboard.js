@@ -8,11 +8,13 @@ import {
   renderDashboardChat,
   renderDashboardCustomers,
   renderDashboardProducts,
+  renderLanding,
 } from '../controllers/dashboardController.js';
 
 export const dashboardRouter = Router();
 const dashboardAssetsPath = fileURLToPath(new URL('../../web/dashboard', import.meta.url));
 
+dashboardRouter.get('/', renderLanding);
 dashboardRouter.get('/dashboard', renderDashboard);
 dashboardRouter.get('/dashboard/chat', renderDashboardChat);
 dashboardRouter.get('/dashboard/b2b', renderDashboardB2b);

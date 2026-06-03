@@ -22,7 +22,7 @@ function isRateLimitError(error) {
 const EXTRACT_PROMPT = readFileSync(new URL('./prompts/extract.v1.md', import.meta.url), 'utf8');
 const ACTION_PATTERNS = [
   { action: 'stock_in', pattern: /\b(masuk|beli|restock|tambah)\b/giu },
-  { action: 'sale', pattern: /\b(laku|jual|terjual|keluar)\b/giu },
+  { action: 'sale', pattern: /\b(laku|jual|terjual|keluar|belanja)\b/giu },
 ];
 
 const SEGMENT_SPLIT_PATTERN = /\s*(?:,| dan | sama | terus | lalu )\s*/giu;

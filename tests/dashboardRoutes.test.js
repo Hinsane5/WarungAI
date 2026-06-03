@@ -122,13 +122,24 @@ describe('dashboard routes', () => {
     vi.clearAllMocks();
   });
 
+  it('renders the role-select landing page at root', async () => {
+    const response = await request(app).get('/').expect(200);
+
+    expect(response.text).toContain('Pilih Akses');
+    expect(response.text).toContain('Distributor / Principal FMCG');
+    expect(response.text).toContain('Pemilik Warung');
+  });
+
   it('renders the dashboard page', async () => {
     const response = await request(app).get('/dashboard').expect(200);
 
     expect(response.text).toContain('WarungAI Dashboard');
     expect(response.text).toContain('/dashboard/js/app.js');
     expect(response.text).toContain('/dashboard/chat');
-    expect(response.text).toContain('/dashboard/b2b');
+    expect(response.text).toContain('/dashboard/products');
+    expect(response.text).toContain('/dashboard/customers');
+    // B2B is a separate partner audience now — it must NOT appear in the owner navbar.
+    expect(response.text).not.toContain('/dashboard/b2b');
   });
 
   it('renders the dashboard chat page', async () => {

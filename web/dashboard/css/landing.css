@@ -1,0 +1,169 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--wa-green-900);
+  color: var(--wa-ink-900);
+}
+
+.role-split {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+}
+
+.role-brand {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  border-radius: var(--r-pill);
+  background: rgba(14, 59, 48, 0.55);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.role-brand__mark {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.role-panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+  transition:
+    flex 0.3s ease,
+    filter 0.3s ease;
+}
+
+.role-panel--b2b {
+  background: linear-gradient(160deg, #1d2a52 0%, #25336b 55%, #2f3f86 100%);
+  color: #fff;
+}
+
+.role-panel--warung {
+  background: linear-gradient(160deg, var(--wa-green-800) 0%, var(--wa-green-700) 55%, var(--wa-green-600) 100%);
+  color: #fff;
+}
+
+.role-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.role-panel:hover::after,
+.role-panel:focus-visible::after {
+  opacity: 1;
+}
+
+.role-panel__inner {
+  position: relative;
+  z-index: 1;
+  max-width: 420px;
+  text-align: left;
+}
+
+.role-panel__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 30px;
+  margin-bottom: 20px;
+}
+
+.role-panel__tag {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.role-panel__title {
+  margin: 14px 0 12px;
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.role-panel__desc {
+  margin: 0 0 26px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.role-panel__desc strong {
+  color: #fff;
+}
+
+.role-panel__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  color: var(--wa-ink-900);
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.role-panel--b2b .role-panel__cta {
+  color: #25336b;
+}
+
+.role-panel--warung .role-panel__cta {
+  color: var(--wa-green-800);
+}
+
+@media (max-width: 760px) {
+  .role-split {
+    grid-template-columns: 1fr;
+  }
+
+  .role-panel {
+    padding: 80px 28px 40px;
+    min-height: 50vh;
+  }
+
+  .role-brand {
+    top: 16px;
+  }
+}

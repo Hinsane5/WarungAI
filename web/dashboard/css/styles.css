@@ -75,6 +75,40 @@ select {
   color: #fff;
 }
 
+/* Chat Bot is a demo-only entry: push it to the far right of the nav,
+   separated from the owner's real pages, and flag it for judges. */
+.nav-pills__demo {
+  margin-left: 18px;
+  padding-left: 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.nav-pills__demo a {
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.nav-demo-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.role-switch-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.role-switch-link:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .topbar__meta {
   margin-left: auto;
   display: flex;

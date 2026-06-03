@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WarungAI — Pilih Akses</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/dashboard/css/tokens.css" />
+    <link rel="stylesheet" href="/dashboard/css/landing.css" />
+  </head>
+  <body>
+    <main class="role-split">
+      <div class="role-brand">
+        <span class="role-brand__mark">W</span><span>WarungAI</span>
+      </div>
+
+      <a class="role-panel role-panel--b2b" id="b2bPanel" href="/dashboard/b2b">
+        <div class="role-panel__inner">
+          <span class="role-panel__icon" aria-hidden="true">📊</span>
+          <span class="role-panel__tag">Akses B2B</span>
+          <h2 class="role-panel__title">Distributor / Principal FMCG</h2>
+          <p class="role-panel__desc">
+            Dashboard analitik <strong>regional agregat</strong> — produk terlaris,
+            turnover rate, dan tren harga eceran per wilayah. Untuk distributor &amp;
+            principal (mis. Indofood, Unilever).
+          </p>
+          <span class="role-panel__cta">Masuk sebagai Mitra B2B →</span>
+        </div>
+      </a>
+
+      <a class="role-panel role-panel--warung" id="warungPanel" href="/dashboard">
+        <div class="role-panel__inner">
+          <span class="role-panel__icon" aria-hidden="true">🏪</span>
+          <span class="role-panel__tag">Akses Pemilik Warung</span>
+          <h2 class="role-panel__title">Pemilik Warung</h2>
+          <p class="role-panel__desc">
+            Laporan harian, kelola <strong>produk</strong> &amp; <strong>pelanggan</strong>,
+            kasbon, dan predictive restock — warung Anda sendiri.
+          </p>
+          <span class="role-panel__cta">Masuk sebagai Pemilik Warung →</span>
+        </div>
+      </a>
+    </main>
+
+    <script>
+      (function () {
+        var DEMO_TOKEN = 'dash_demo_8f6b8e4c3f9d4e19b2a6f0d1';
+        var params = new URLSearchParams(window.location.search);
+        var token = params.get('token') || localStorage.getItem('warungai.dashboardToken') || DEMO_TOKEN;
+        try {
+          localStorage.setItem('warungai.dashboardToken', token);
+        } catch (e) {
+          /* ignore storage errors */
+        }
+        var q = new URLSearchParams({ token: token }).toString();
+        document.getElementById('b2bPanel').href = '/dashboard/b2b?' + q;
+        document.getElementById('warungPanel').href = '/dashboard?' + q;
+      })();
+    </script>
+  </body>
+</html>

@@ -7,7 +7,6 @@ const customersBody = document.querySelector('#customersBody');
 const customerCountLabel = document.querySelector('#customerCountLabel');
 const dashboardNavLink = document.querySelector('#dashboardNavLink');
 const chatNavLink = document.querySelector('#chatNavLink');
-const b2bNavLink = document.querySelector('#b2bNavLink');
 const productsNavLink = document.querySelector('#productsNavLink');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 let customers = [];
@@ -31,16 +30,21 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+function setNavHref(link, path, token) {
+  if (!link) {
+    return;
+  }
+  link.href = token ? `${path}?${new URLSearchParams({ token })}` : path;
+}
+
 function syncLinks() {
   const token = tokenInput.value.trim();
-  dashboardNavLink.href = token ? `/dashboard?${new URLSearchParams({ token })}` : '/dashboard';
-  chatNavLink.href = token
-    ? `/dashboard/chat?${new URLSearchParams({ token })}`
-    : '/dashboard/chat';
-  b2bNavLink.href = token ? `/dashboard/b2b?${new URLSearchParams({ token })}` : '/dashboard/b2b';
-  productsNavLink.href = token
-    ? `/dashboard/products?${new URLSearchParams({ token })}`
-    : '/dashboard/products';
+  if (token) {
+    localStorage.setItem('warungai.dashboardToken', token);
+  }
+  setNavHref(dashboardNavLink, '/dashboard', token);
+  setNavHref(chatNavLink, '/dashboard/chat', token);
+  setNavHref(productsNavLink, '/dashboard/products', token);
 }
 
 function badgeClass(kind) {

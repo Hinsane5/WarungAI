@@ -8,7 +8,6 @@ const formStatus = document.querySelector('#formStatus');
 const productCountLabel = document.querySelector('#productCountLabel');
 const dashboardNavLink = document.querySelector('#dashboardNavLink');
 const chatNavLink = document.querySelector('#chatNavLink');
-const b2bNavLink = document.querySelector('#b2bNavLink');
 const customersNavLink = document.querySelector('#customersNavLink');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 
@@ -21,16 +20,21 @@ const rupiah = (value) =>
     maximumFractionDigits: 0,
   }).format(value || 0);
 
+function setNavHref(link, path, token) {
+  if (!link) {
+    return;
+  }
+  link.href = token ? `${path}?${new URLSearchParams({ token })}` : path;
+}
+
 function syncLinks() {
   const token = tokenInput.value.trim();
-  dashboardNavLink.href = token ? `/dashboard?${new URLSearchParams({ token })}` : '/dashboard';
-  chatNavLink.href = token
-    ? `/dashboard/chat?${new URLSearchParams({ token })}`
-    : '/dashboard/chat';
-  b2bNavLink.href = token ? `/dashboard/b2b?${new URLSearchParams({ token })}` : '/dashboard/b2b';
-  customersNavLink.href = token
-    ? `/dashboard/customers?${new URLSearchParams({ token })}`
-    : '/dashboard/customers';
+  if (token) {
+    localStorage.setItem('warungai.dashboardToken', token);
+  }
+  setNavHref(dashboardNavLink, '/dashboard', token);
+  setNavHref(chatNavLink, '/dashboard/chat', token);
+  setNavHref(customersNavLink, '/dashboard/customers', token);
 }
 
 function query() {

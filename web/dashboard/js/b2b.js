@@ -3,10 +3,8 @@
 const params = new URLSearchParams(window.location.search);
 const tokenInput = document.querySelector('#dashboardToken');
 const regionSelect = document.querySelector('#regionSelect');
-const dashboardNavLink = document.querySelector('#dashboardNavLink');
-const chatNavLink = document.querySelector('#chatNavLink');
-const productsNavLink = document.querySelector('#productsNavLink');
-const customersNavLink = document.querySelector('#customersNavLink');
+const b2bNavLink = document.querySelector('#b2bNavLink');
+const roleSwitchLink = document.querySelector('#roleSwitchLink');
 const topBrandEmpty = document.querySelector('#topBrandEmpty');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 let topBrandChart;
@@ -22,18 +20,20 @@ const rupiah = (value) =>
     maximumFractionDigits: 0,
   }).format(value || 0);
 
+function setNavHref(link, path, token) {
+  if (!link) {
+    return;
+  }
+  link.href = token ? `${path}?${new URLSearchParams({ token })}` : path;
+}
+
 function syncLinks() {
   const token = tokenInput.value.trim();
-  dashboardNavLink.href = token ? `/dashboard?${new URLSearchParams({ token })}` : '/dashboard';
-  chatNavLink.href = token
-    ? `/dashboard/chat?${new URLSearchParams({ token })}`
-    : '/dashboard/chat';
-  productsNavLink.href = token
-    ? `/dashboard/products?${new URLSearchParams({ token })}`
-    : '/dashboard/products';
-  customersNavLink.href = token
-    ? `/dashboard/customers?${new URLSearchParams({ token })}`
-    : '/dashboard/customers';
+  if (token) {
+    localStorage.setItem('warungai.dashboardToken', token);
+  }
+  setNavHref(b2bNavLink, '/dashboard/b2b', token);
+  setNavHref(roleSwitchLink, '/', token);
 }
 
 function api(path, extra = {}) {

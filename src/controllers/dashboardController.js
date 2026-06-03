@@ -20,6 +20,10 @@ import {
 } from '../services/bigqueryService.js';
 import { createDashboardProduct, listDashboardProducts } from '../services/productService.js';
 
+const landingHtml = readFileSync(
+  new URL('../../web/dashboard/landing.html', import.meta.url),
+  'utf8',
+);
 const dashboardHtml = readFileSync(
   new URL('../../web/dashboard/index.html', import.meta.url),
   'utf8',
@@ -106,6 +110,11 @@ function avgTurnoverDays(rows) {
 
   const total = rows.reduce((sum, row) => sum + asNumber(row.daysPerUnit), 0);
   return Math.round((total / rows.length) * 10) / 10;
+}
+
+export function renderLanding(_req, res) {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.status(200).type('html').send(landingHtml);
 }
 
 export function renderDashboard(_req, res) {
