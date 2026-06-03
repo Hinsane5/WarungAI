@@ -14,7 +14,12 @@ export {
   generateLoyaltyQrSlug,
 } from './shopService.js';
 export { confirmPendingTransaction, handleTextPos } from './posService.js';
-export { learnAlias, resolveProduct } from './productService.js';
+export {
+  createDashboardProduct,
+  learnAlias,
+  listDashboardProducts,
+  resolveProduct,
+} from './productService.js';
 export { getOrCreateSession, setSessionState } from './sessionService.js';
 export {
   approveKasbonReminder,

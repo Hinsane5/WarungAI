@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WarungAI Produk</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/dashboard/css/tokens.css" />
+    <link rel="stylesheet" href="/dashboard/css/styles.css" />
+    <link rel="stylesheet" href="/dashboard/css/products.css" />
+    <script defer src="/dashboard/js/products.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__inner">
+        <div class="brand"><span class="brand__mark">W</span><span>WarungAI</span></div>
+        <nav>
+          <ul class="nav-pills">
+            <li><a id="dashboardNavLink" href="/dashboard">Dashboard</a></li>
+            <li><a id="chatNavLink" href="/dashboard/chat">Chat Bot</a></li>
+            <li><a id="b2bNavLink" href="/dashboard/b2b">B2B Data</a></li>
+            <li><a class="active" href="/dashboard/products">Produk</a></li>
+            <li><a href="/dashboard">Pelanggan</a></li>
+          </ul>
+        </nav>
+        <div class="topbar__meta">
+          <span id="productCountLabel">0 produk</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="canvas">
+      <section class="hero-row">
+        <div>
+          <p class="eyebrow">Catalog</p>
+          <h1 class="shop-title">Produk Warung</h1>
+        </div>
+        <div class="actions">
+          <input
+            id="dashboardToken"
+            class="owner-input"
+            autocomplete="off"
+            placeholder="dash_..."
+            aria-label="Dashboard token"
+          />
+        </div>
+      </section>
+
+      <section class="products-layout">
+        <article class="widget-card products-card">
+          <div class="widget-card__header">
+            <h2 class="widget-card__title">📦 Daftar Produk</h2>
+            <span class="muted">Harga IDR · stok real-time</span>
+          </div>
+          <div class="table-wrap">
+            <table class="products-table">
+              <thead>
+                <tr>
+                  <th>Nama</th>
+                  <th>Kategori</th>
+                  <th>Stok</th>
+                  <th>Harga Jual</th>
+                  <th>Harga Modal</th>
+                  <th>Reorder</th>
+                </tr>
+              </thead>
+              <tbody id="productsBody">
+                <tr>
+                  <td colspan="6"><div class="empty-state">Memuat produk</div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="widget-card form-card">
+          <div class="widget-card__header">
+            <h2 class="widget-card__title">➕ Tambah Produk</h2>
+          </div>
+          <form id="productForm" class="product-form">
+            <label>
+              <span>Nama</span>
+              <input name="name" required maxlength="120" placeholder="Milo 3in1" />
+            </label>
+            <label>
+              <span>Kategori</span>
+              <input name="category" maxlength="80" placeholder="Minuman" />
+            </label>
+            <label>
+              <span>Unit</span>
+              <input name="unit" maxlength="40" placeholder="sachet" />
+            </label>
+            <div class="form-grid">
+              <label>
+                <span>Stok</span>
+                <input name="stock" type="number" min="0" step="1" value="0" />
+              </label>
+              <label>
+                <span>Reorder</span>
+                <input name="reorderPoint" type="number" min="0" step="1" value="0" />
+              </label>
+            </div>
+            <label>
+              <span>Harga Jual</span>
+              <input name="sellPrice" type="number" min="0" step="1" value="0" />
+            </label>
+            <label>
+              <span>Harga Modal</span>
+              <input name="costPrice" type="number" min="0" step="1" value="0" />
+            </label>
+            <button class="export-button" type="submit">Tambah Produk</button>
+            <p id="formStatus" class="form-status" aria-live="polite"></p>
+          </form>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

@@ -5,6 +5,7 @@ const tokenInput = document.querySelector('#dashboardToken');
 const regionSelect = document.querySelector('#regionSelect');
 const dashboardNavLink = document.querySelector('#dashboardNavLink');
 const chatNavLink = document.querySelector('#chatNavLink');
+const productsNavLink = document.querySelector('#productsNavLink');
 const topBrandEmpty = document.querySelector('#topBrandEmpty');
 const dashboardToken = params.get('token') || localStorage.getItem('warungai.dashboardToken') || '';
 let topBrandChart;
@@ -26,6 +27,9 @@ function syncLinks() {
   chatNavLink.href = token
     ? `/dashboard/chat?${new URLSearchParams({ token })}`
     : '/dashboard/chat';
+  productsNavLink.href = token
+    ? `/dashboard/products?${new URLSearchParams({ token })}`
+    : '/dashboard/products';
 }
 
 function api(path, extra = {}) {

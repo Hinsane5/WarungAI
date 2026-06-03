@@ -13,6 +13,8 @@ const getActiveWarungMock = vi.hoisted(() => vi.fn());
 const getTopBrandsMock = vi.hoisted(() => vi.fn());
 const getTurnoverByItemMock = vi.hoisted(() => vi.fn());
 const getRetailPriceTrendMock = vi.hoisted(() => vi.fn());
+const listDashboardProductsMock = vi.hoisted(() => vi.fn());
+const createDashboardProductMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/services/analyticsService.js', () => ({
   getShopByDashboardToken: getShopByDashboardTokenMock,
@@ -30,6 +32,11 @@ vi.mock('../src/services/bigqueryService.js', () => ({
   getTopBrands: getTopBrandsMock,
   getTurnoverByItem: getTurnoverByItemMock,
   getRetailPriceTrend: getRetailPriceTrendMock,
+}));
+
+vi.mock('../src/services/productService.js', () => ({
+  listDashboardProducts: listDashboardProductsMock,
+  createDashboardProduct: createDashboardProductMock,
 }));
 
 const { app } = await import('../src/app.js');
@@ -80,6 +87,20 @@ describe('dashboard routes', () => {
         avgPrice: { value: '16000' },
       },
     ]);
+    listDashboardProductsMock.mockResolvedValue([
+      {
+        id: 'product-1',
+        name: 'Indomie Goreng',
+        category: 'Makanan',
+        unit: 'pcs',
+        stock: 12,
+        sellPrice: 3000,
+        costPrice: 2500,
+        reorderPoint: 5,
+        lowStock: false,
+      },
+    ]);
+    createDashboardProductMock.mockResolvedValue({ ok: true, id: 'product-2' });
   });
 
   afterEach(() => {
@@ -107,6 +128,13 @@ describe('dashboard routes', () => {
 
     expect(response.text).toContain('WarungAI B2B Data');
     expect(response.text).toContain('/dashboard/js/b2b.js');
+  });
+
+  it('renders the products page', async () => {
+    const response = await request(app).get('/dashboard/products').expect(200);
+
+    expect(response.text).toContain('WarungAI Produk');
+    expect(response.text).toContain('/dashboard/js/products.js');
   });
 
   it('requires a dashboard token for dashboard API requests', async () => {
@@ -192,6 +220,94 @@ describe('dashboard routes', () => {
       .get('/api/dashboard/b2b/top-brands')
       .query({ token: 'dash-test', region: 'Tangerang' })
       .expect(200, []);
+  });
+
+  it('returns empty B2B data when BigQuery fails', async () => {
+    getActiveWarungMock.mockRejectedValueOnce(new Error('adc missing'));
+
+    await request(app)
+      .get('/api/dashboard/b2b/summary')
+      .query({ token: 'dash-test', region: 'Tangerang' })
+      .expect(200, {
+        activeWarung: 0,
+        avgTurnoverDays: 0,
+        region: 'Tangerang',
+      });
+
+    getTopBrandsMock.mockRejectedValueOnce(new Error('adc missing'));
+    await request(app)
+      .get('/api/dashboard/b2b/top-brands')
+      .query({ token: 'dash-test', region: 'Tangerang' })
+      .expect(200, []);
+  });
+
+  it('requires a dashboard token for product API requests', async () => {
+    await request(app).get('/api/dashboard/products').expect(401, {
+      ok: false,
+      error: 'dashboard_token_required',
+    });
+  });
+
+  it('lists dashboard products for the token shop', async () => {
+    await request(app)
+      .get('/api/dashboard/products')
+      .query({ token: 'dash-test' })
+      .expect(200, [
+        {
+          id: 'product-1',
+          name: 'Indomie Goreng',
+          category: 'Makanan',
+          unit: 'pcs',
+          stock: 12,
+          sellPrice: 3000,
+          costPrice: 2500,
+          reorderPoint: 5,
+          lowStock: false,
+        },
+      ]);
+
+    expect(listDashboardProductsMock).toHaveBeenCalledWith(shop);
+  });
+
+  it('creates dashboard products for the token shop', async () => {
+    const payload = {
+      name: 'Milo 3in1',
+      category: 'Minuman',
+      unit: 'sachet',
+      stock: 40,
+      sellPrice: 2000,
+      costPrice: 1600,
+      reorderPoint: 10,
+    };
+
+    await request(app)
+      .post('/api/dashboard/products')
+      .query({ token: 'dash-test' })
+      .send(payload)
+      .expect(200, { ok: true, id: 'product-2' });
+
+    expect(createDashboardProductMock).toHaveBeenCalledWith(shop, payload);
+  });
+
+  it('rejects invalid product payloads', async () => {
+    await request(app)
+      .post('/api/dashboard/products')
+      .query({ token: 'dash-test' })
+      .send({ name: '', stock: -1 })
+      .expect(400, { ok: false, error: 'invalid_product' });
+  });
+
+  it('returns 409 for duplicate product names', async () => {
+    createDashboardProductMock.mockResolvedValueOnce({
+      ok: false,
+      reason: 'duplicate_product',
+    });
+
+    await request(app)
+      .post('/api/dashboard/products')
+      .query({ token: 'dash-test' })
+      .send({ name: 'Indomie Goreng', stock: 1 })
+      .expect(409, { ok: false, error: 'duplicate_product' });
   });
 
   it('serves premium Excel export', async () => {

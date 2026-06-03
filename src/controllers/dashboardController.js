@@ -17,6 +17,7 @@ import {
   getTopBrands,
   getTurnoverByItem,
 } from '../services/bigqueryService.js';
+import { createDashboardProduct, listDashboardProducts } from '../services/productService.js';
 
 const dashboardHtml = readFileSync(
   new URL('../../web/dashboard/index.html', import.meta.url),
@@ -24,11 +25,24 @@ const dashboardHtml = readFileSync(
 );
 const chatHtml = readFileSync(new URL('../../web/dashboard/chat.html', import.meta.url), 'utf8');
 const b2bHtml = readFileSync(new URL('../../web/dashboard/b2b.html', import.meta.url), 'utf8');
+const productsHtml = readFileSync(
+  new URL('../../web/dashboard/products.html', import.meta.url),
+  'utf8',
+);
 
 const b2bQuerySchema = z.object({
   region: z.string().trim().min(1).max(80).default('Tangerang'),
   productName: z.string().trim().min(1).max(120).optional(),
   limit: z.coerce.number().int().min(1).max(20).default(5),
+});
+const productCreateSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  category: z.string().trim().max(80).default(''),
+  unit: z.string().trim().max(40).default('pcs'),
+  stock: z.coerce.number().int().nonnegative().default(0),
+  sellPrice: z.coerce.number().int().nonnegative().default(0),
+  costPrice: z.coerce.number().int().nonnegative().default(0),
+  reorderPoint: z.coerce.number().int().nonnegative().default(0),
 });
 
 async function resolveDashboardShop(req, res) {
@@ -52,6 +66,11 @@ async function resolveDashboardShop(req, res) {
 function handleDashboardError(req, res, error) {
   req.log?.error({ err: error }, 'Dashboard request failed');
   return res.status(500).json({ ok: false, error: 'dashboard_failed' });
+}
+
+function handleB2bError(req, res, error, fallback) {
+  req.log?.warn({ err: error }, 'B2B BigQuery request failed; returning empty dashboard data');
+  return res.status(200).json(fallback);
 }
 
 function parseB2bQuery(req, res) {
@@ -99,6 +118,11 @@ export function renderDashboardB2b(_req, res) {
   res.status(200).type('html').send(b2bHtml);
 }
 
+export function renderDashboardProducts(_req, res) {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.status(200).type('html').send(productsHtml);
+}
+
 export async function dashboardSummary(req, res) {
   try {
     const shop = await resolveDashboardShop(req, res);
@@ -116,10 +140,20 @@ export async function dashboardB2bSummary(req, res) {
     const query = parseB2bQuery(req, res);
     if (!query) return null;
 
-    const [activeWarung, turnover] = await Promise.all([
-      getActiveWarung({ region: query.region }),
-      getTurnoverByItem({ region: query.region }),
-    ]);
+    let activeWarung;
+    let turnover;
+    try {
+      [activeWarung, turnover] = await Promise.all([
+        getActiveWarung({ region: query.region }),
+        getTurnoverByItem({ region: query.region }),
+      ]);
+    } catch (error) {
+      return handleB2bError(req, res, error, {
+        activeWarung: 0,
+        avgTurnoverDays: 0,
+        region: query.region,
+      });
+    }
 
     return res.status(200).json({
       activeWarung: asNumber(activeWarung),
@@ -138,7 +172,12 @@ export async function dashboardB2bTopBrands(req, res) {
     const query = parseB2bQuery(req, res);
     if (!query) return null;
 
-    const rows = await getTopBrands({ region: query.region, limit: query.limit });
+    let rows;
+    try {
+      rows = await getTopBrands({ region: query.region, limit: query.limit });
+    } catch (error) {
+      return handleB2bError(req, res, error, []);
+    }
     return res.status(200).json(
       rows.map((row) => ({
         productName: row.productName,
@@ -158,7 +197,12 @@ export async function dashboardB2bTurnover(req, res) {
     const query = parseB2bQuery(req, res);
     if (!query) return null;
 
-    const rows = await getTurnoverByItem({ region: query.region });
+    let rows;
+    try {
+      rows = await getTurnoverByItem({ region: query.region });
+    } catch (error) {
+      return handleB2bError(req, res, error, []);
+    }
     return res.status(200).json(
       rows.map((row) => ({
         productName: row.productName,
@@ -179,10 +223,15 @@ export async function dashboardB2bPriceTrend(req, res) {
     const query = parseB2bQuery(req, res);
     if (!query) return null;
 
-    const rows = await getRetailPriceTrend({
-      region: query.region,
-      productName: query.productName,
-    });
+    let rows;
+    try {
+      rows = await getRetailPriceTrend({
+        region: query.region,
+        productName: query.productName,
+      });
+    } catch (error) {
+      return handleB2bError(req, res, error, []);
+    }
     return res.status(200).json(
       rows.map((row) => ({
         week: asDateLabel(row.week),
@@ -190,6 +239,37 @@ export async function dashboardB2bPriceTrend(req, res) {
         avgPrice: asNumber(row.avgPrice),
       })),
     );
+  } catch (error) {
+    return handleDashboardError(req, res, error);
+  }
+}
+
+export async function dashboardProducts(req, res) {
+  try {
+    const shop = await resolveDashboardShop(req, res);
+    if (!shop) return null;
+    return res.status(200).json(await listDashboardProducts(shop));
+  } catch (error) {
+    return handleDashboardError(req, res, error);
+  }
+}
+
+export async function dashboardCreateProduct(req, res) {
+  try {
+    const shop = await resolveDashboardShop(req, res);
+    if (!shop) return null;
+
+    const parsed = productCreateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: 'invalid_product' });
+    }
+
+    const result = await createDashboardProduct(shop, parsed.data);
+    if (!result.ok && result.reason === 'duplicate_product') {
+      return res.status(409).json({ ok: false, error: 'duplicate_product' });
+    }
+
+    return res.status(200).json(result);
   } catch (error) {
     return handleDashboardError(req, res, error);
   }
