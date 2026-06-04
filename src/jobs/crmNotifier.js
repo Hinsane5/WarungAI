@@ -25,8 +25,8 @@ export function restockMessage({ shop, product, segment }) {
 // Nightly: compute RFM segments and send due restock reminders to customers.
 // Customer sends are metered (Koin Bot quota) + opt-in; owner is notified once when
 // credits run out. Pure callable (cron + HTTP trigger).
-export async function runCrmNotifier({ now = new Date() } = {}) {
-  const shops = await Shop.find({});
+export async function runCrmNotifier({ now = new Date(), shopFilter = {} } = {}) {
+  const shops = await Shop.find(shopFilter);
   let remindersSent = 0;
   let customersSegmented = 0;
 

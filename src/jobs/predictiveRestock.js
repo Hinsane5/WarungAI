@@ -48,8 +48,8 @@ export function formatLowStockMessage(flagged) {
 
 // Nightly: flag low/expiring stock to owners (unmetered) and refresh per-customer
 // routine restock predictions for crmNotifier to act on. Pure callable (cron + HTTP trigger).
-export async function runPredictiveRestock({ now = new Date() } = {}) {
-  const shops = await Shop.find({});
+export async function runPredictiveRestock({ now = new Date(), shopFilter = {} } = {}) {
+  const shops = await Shop.find(shopFilter);
   let shopsProcessed = 0;
   let ownersNotified = 0;
   let customersUpdated = 0;

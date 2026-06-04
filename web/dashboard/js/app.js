@@ -244,6 +244,9 @@ async function loadCrmPreview() {
     const data = await api('/api/dashboard/crm/preview');
     const s = data.summary;
     const parts = [
+      `<div class="crm-preview__summary">Jadwal evaluasi harian: ${escapeHtml(
+        data.schedule || '01:00',
+      )} WIB · atur lewat WhatsApp: "jadwal evaluasi 19.00"</div>`,
       `<div class="crm-preview__summary">${s.customersSegmented} pelanggan tersegmentasi · ${s.customerReminders} pengingat pelanggan · ${s.ownerAlerts} alert pemilik · Koin Bot ${s.koinBotNeeded}/${s.koinBotBalance}</div>`,
     ];
 

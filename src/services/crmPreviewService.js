@@ -16,6 +16,7 @@ import {
 } from './crmService.js';
 import { formatLowStockMessage, soldQtyByProduct } from '../jobs/predictiveRestock.js';
 import { restockMessage } from '../jobs/crmNotifier.js';
+import { formatSchedule } from './scheduleService.js';
 
 const MS_PER_DAY = 86_400_000;
 
@@ -91,6 +92,7 @@ export async function previewProactiveCrm(shop, { now = new Date() } = {}) {
   return {
     mode: 'preview',
     ranAt: now.toISOString(),
+    schedule: formatSchedule(shop),
     summary: {
       customersSegmented: segments.length,
       ownerAlerts: ownerAlert ? 1 : 0,

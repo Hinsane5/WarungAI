@@ -17,6 +17,14 @@ const shopSchema = new mongoose.Schema(
       dailyTxnDate: String,
       koinBotBalance: { type: Number, default: 0 },
     },
+    // Owner-configurable daily evaluation time (in the shop's timezone). When unset, the
+    // scheduler falls back to the global default. lastEvaluationDate (YYYY-MM-DD in shop tz)
+    // makes the daily run idempotent so an every-minute scheduler runs it once per day.
+    evaluationSchedule: {
+      hour: { type: Number, min: 0, max: 23 },
+      minute: { type: Number, min: 0, max: 59 },
+    },
+    lastEvaluationDate: { type: String },
     loyaltyQrSlug: { type: String, required: true, trim: true, unique: true },
     dashboardToken: { type: String, required: true, trim: true, unique: true },
   },

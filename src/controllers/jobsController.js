@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 
 import { config } from '../config/index.js';
-import { runNightlyJobs } from '../jobs/index.js';
+import { runNightlyJobs, runScheduledTick } from '../jobs/index.js';
 
 function secretValid(provided) {
   const expected = config.jobs.triggerSecret;
@@ -30,6 +30,22 @@ export async function triggerNightlyJobs(req, res) {
     return res.status(200).json({ ok: true, result });
   } catch (error) {
     req.log?.error({ err: error }, 'Nightly jobs trigger failed');
+    return res.status(500).json({ ok: false, error: 'jobs_failed' });
+  }
+}
+
+// HTTP trigger meant to be called every minute by Cloud Scheduler. Runs the per-shop
+// evaluation only for shops whose owner-set time has arrived (and once-a-day BigQuery).
+export async function triggerEvaluationTick(req, res) {
+  if (!secretValid(req.get('x-warungai-jobs-secret'))) {
+    return res.sendStatus(403);
+  }
+
+  try {
+    const result = await runScheduledTick();
+    return res.status(200).json({ ok: true, result });
+  } catch (error) {
+    req.log?.error({ err: error }, 'Evaluation tick failed');
     return res.status(500).json({ ok: false, error: 'jobs_failed' });
   }
 }

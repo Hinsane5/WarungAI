@@ -3,9 +3,16 @@ import { exportTransactions } from '../services/bigqueryService.js';
 import { logger } from '../utils/logger.js';
 import { runCreditScoreRefresh } from './creditScoreRefresh.js';
 import { runCrmNotifier } from './crmNotifier.js';
+import { runDueEvaluations, runScheduledTick } from './dueEvaluations.js';
 import { runPredictiveRestock } from './predictiveRestock.js';
 
-export { runPredictiveRestock, runCreditScoreRefresh, runCrmNotifier };
+export {
+  runPredictiveRestock,
+  runCreditScoreRefresh,
+  runCrmNotifier,
+  runDueEvaluations,
+  runScheduledTick,
+};
 
 // Orchestrates the nightly batch. Each step is independently callable (cron or an
 // HTTP/Cloud Scheduler trigger). Order: restock predictions → credit refresh → CRM sends

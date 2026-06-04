@@ -8,6 +8,7 @@ import {
   parseReminderCommand,
 } from '../services/kasbonService.js';
 import { confirmPendingTransaction, handleTextPos } from '../services/posService.js';
+import { handleScheduleCommand, parseScheduleCommand } from '../services/scheduleService.js';
 import { findOrCreateByOwnerPhone } from '../services/shopService.js';
 import { getOrCreateSession } from '../services/sessionService.js';
 import { logger } from '../utils/logger.js';
@@ -97,6 +98,10 @@ export async function routeInboundMessage(message) {
 
   if (session.state === 'awaiting_kasbon_reminder_approval') {
     return approveKasbonReminder({ shop, session, message });
+  }
+
+  if (parseScheduleCommand(message.text)) {
+    return handleScheduleCommand({ shop, message });
   }
 
   if (/^\s*kasbon\b/iu.test(message.text)) {
