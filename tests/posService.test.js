@@ -182,11 +182,57 @@ describe('posService', () => {
 
     expect(transactionCreateMock).not.toHaveBeenCalled();
     expect(setSessionStateMock).toHaveBeenCalledWith(session, 'clarifying', {
-      lastQuestion: expect.stringContaining('Harga Aqua Galon berapa?'),
+      lastQuestion: expect.stringContaining('harga jual Aqua Galon'),
     });
     expect(sendTextMock).toHaveBeenCalledWith(
       '+6281234567890',
       expect.stringContaining('Kirim ulang dengan harga'),
+    );
+    expect(result.action).toBe('clarifying_missing_price');
+  });
+
+  it('asks for cost price instead of recording a zero-rupiah stock-in', async () => {
+    const product = createProduct({
+      _id: 'product-1',
+      name: 'Pocari 1 Liter',
+      sellPrice: undefined,
+      costPrice: undefined,
+    });
+    resolveProductMock.mockResolvedValue({ product, rawName: 'pocari 1 liter', created: true });
+    extractEntitiesMock.mockResolvedValue({
+      intent: 'pos',
+      items: [
+        {
+          rawName: 'pocari 1 liter',
+          qty: 2,
+          unit: 'dus',
+          unitPrice: null,
+          action: 'stock_in',
+        },
+      ],
+      confidence: 0.9,
+      needsClarification: false,
+    });
+    const session = createSession();
+
+    const result = await handleTextPos({
+      shop: createShop(),
+      session,
+      message: {
+        from: '+6281234567890',
+        type: 'text',
+        text: 'masuk 2 dus pocari 1 liter',
+        messageId: 'wamid-stock-price',
+      },
+    });
+
+    expect(transactionCreateMock).not.toHaveBeenCalled();
+    expect(setSessionStateMock).toHaveBeenCalledWith(session, 'clarifying', {
+      lastQuestion: expect.stringContaining('harga modal Pocari 1 Liter'),
+    });
+    expect(sendTextMock).toHaveBeenCalledWith(
+      '+6281234567890',
+      expect.stringContaining('contoh: masuk 2 dus pocari 1 liter 20000'),
     );
     expect(result.action).toBe('clarifying_missing_price');
   });

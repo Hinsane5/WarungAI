@@ -65,8 +65,14 @@ function cashDeltaForItems(items) {
   }, 0);
 }
 
-function findMissingSalePrice(items) {
-  return items.find((item) => item.action === 'sale' && !item.unitPrice);
+function findMissingPrice(items) {
+  return items.find((item) => !item.unitPrice);
+}
+
+function priceQuestionForItem(item) {
+  const actionText = actionLabel(item.action);
+  const priceKind = item.action === 'sale' ? 'harga jual' : 'harga modal';
+  return `Berapa ${priceKind} ${item.name}? Kirim ulang dengan harga, contoh: ${actionText} ${formatQty(item)} ${item.rawName} 20000.`;
 }
 
 function formatMoney(value) {
@@ -149,10 +155,10 @@ export async function handleTextPos({ shop, session, message }) {
   }
 
   const { items } = await buildPendingItems(shop._id, extraction.items);
-  const missingPriceItem = findMissingSalePrice(items);
+  const missingPriceItem = findMissingPrice(items);
 
   if (missingPriceItem) {
-    const question = `Harga ${missingPriceItem.name} berapa? Kirim ulang dengan harga, contoh: laku ${formatQty(missingPriceItem)} ${missingPriceItem.rawName} 20000.`;
+    const question = priceQuestionForItem(missingPriceItem);
     await setSessionState(session, 'clarifying', {
       lastQuestion: question,
     });

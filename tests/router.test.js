@@ -116,6 +116,24 @@ describe('routeInboundMessage', () => {
     });
   });
 
+  it('answers /bantuan without routing to POS', async () => {
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: '/bantuan',
+    };
+
+    const result = await routeInboundMessage(message);
+
+    expect(sendTextMock).toHaveBeenCalledWith(
+      '+6281234567890',
+      expect.stringContaining('Daftar perintah WarungAI'),
+    );
+    expect(handleTextPosMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ handled: true, action: 'help' });
+  });
+
   it('routes awaiting-confirmation text replies to the confirmation handler', async () => {
     const session = { _id: 'session-1', state: 'awaiting_confirmation' };
     getOrCreateSessionMock.mockResolvedValue(session);

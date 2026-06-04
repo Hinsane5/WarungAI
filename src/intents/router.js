@@ -17,8 +17,23 @@ const WELCOME_MESSAGE = [
   'Selamat datang di WarungAI.',
   'Warung kamu sudah terdaftar.',
   'Untuk mulai, kirim transaksi seperti: "masuk 2 dus indomie" atau "laku 1 galon aqua".',
+  'Ketik /bantuan untuk melihat daftar perintah.',
   'Nanti setiap transaksi akan minta konfirmasi Y/T sebelum masuk buku.',
 ].join('\n');
+
+const HELP_MESSAGE = [
+  'Daftar perintah WarungAI:',
+  '- Catat stok masuk: "masuk 2 dus pocari 1 liter 120000"',
+  '- Catat penjualan: "laku 1 galon aqua 20000"',
+  '- Catat kasbon: "kasbon budi 2 rokok 50000"',
+  '- Tagih kasbon: "tagih budi"',
+  '- Cek/ubah jadwal evaluasi: "jadwal evaluasi" atau "jadwal evaluasi 19.00"',
+  'Setiap transaksi akan minta konfirmasi Y/T sebelum disimpan.',
+].join('\n');
+
+function isHelpCommand(text) {
+  return /^\s*\/?(?:bantuan|help)\s*$/iu.test(text);
+}
 
 async function handleAudioMessage({ shop, session, message }) {
   if (!message.audioMediaId && !message.audioBuffer) {
@@ -90,6 +105,11 @@ export async function routeInboundMessage(message) {
   if (message.type !== 'text' || !message.text) {
     await sendText(message.from, 'Untuk saat ini, kirim pesan teks dulu ya.');
     return { handled: true, action: 'unsupported_message' };
+  }
+
+  if (isHelpCommand(message.text)) {
+    await sendText(message.from, HELP_MESSAGE);
+    return { handled: true, action: 'help' };
   }
 
   if (session.state === 'awaiting_confirmation') {
