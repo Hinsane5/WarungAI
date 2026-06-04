@@ -8,6 +8,7 @@ import {
   dashboardB2bTurnover,
   dashboardCategoryMix,
   dashboardCreateProduct,
+  dashboardUpdateProduct,
   dashboardCrmPreview,
   dashboardCustomers,
   dashboardCreditScores,
@@ -28,6 +29,7 @@ apiRouter.get('/api/dashboard/b2b/turnover', dashboardB2bTurnover);
 apiRouter.get('/api/dashboard/b2b/price-trend', dashboardB2bPriceTrend);
 apiRouter.get('/api/dashboard/products', dashboardProducts);
 apiRouter.post('/api/dashboard/products', dashboardCreateProduct);
+apiRouter.patch('/api/dashboard/products/:id', dashboardUpdateProduct);
 apiRouter.get('/api/dashboard/customers', dashboardCustomers);
 apiRouter.get('/api/dashboard/summary', dashboardSummary);
 apiRouter.get('/api/dashboard/sales-trend', dashboardSalesTrend);

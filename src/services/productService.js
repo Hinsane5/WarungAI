@@ -154,6 +154,30 @@ export async function updateProductPrice({ shopId, productId, rawName, priceType
   return product;
 }
 
+// Dashboard inline edit: set sell and/or cost price on an owned product. Returns the
+// dashboard-shaped product, or null if the id is invalid or not in this shop.
+export async function updateDashboardProductPrices(shop, productId, { sellPrice, costPrice }) {
+  let product;
+  try {
+    product = await Product.findOne({ _id: productId, shopId: shop._id });
+  } catch {
+    return null;
+  }
+
+  if (!product) {
+    return null;
+  }
+
+  if (sellPrice != null) {
+    product.sellPrice = sellPrice;
+  }
+  if (costPrice != null) {
+    product.costPrice = costPrice;
+  }
+  await product.save();
+  return toDashboardProduct(product);
+}
+
 export async function createDashboardProduct(shop, input) {
   const products = await Product.find({ shopId: shop._id });
   const duplicate = products.find(

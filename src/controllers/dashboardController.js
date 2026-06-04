@@ -18,7 +18,11 @@ import {
   getTopBrands,
   getTurnoverByItem,
 } from '../services/bigqueryService.js';
-import { createDashboardProduct, listDashboardProducts } from '../services/productService.js';
+import {
+  createDashboardProduct,
+  listDashboardProducts,
+  updateDashboardProductPrices,
+} from '../services/productService.js';
 import { previewProactiveCrm } from '../services/crmPreviewService.js';
 
 const landingHtml = readFileSync(
@@ -54,6 +58,14 @@ const productCreateSchema = z.object({
   costPrice: z.coerce.number().int().nonnegative().default(0),
   reorderPoint: z.coerce.number().int().nonnegative().default(0),
 });
+const productPriceUpdateSchema = z
+  .object({
+    sellPrice: z.coerce.number().int().nonnegative().optional(),
+    costPrice: z.coerce.number().int().nonnegative().optional(),
+  })
+  .refine((data) => data.sellPrice != null || data.costPrice != null, {
+    message: 'at least one price is required',
+  });
 
 async function resolveDashboardShop(req, res) {
   const token = req.query.token;
@@ -300,6 +312,27 @@ export async function dashboardCreateProduct(req, res) {
     }
 
     return res.status(200).json(result);
+  } catch (error) {
+    return handleDashboardError(req, res, error);
+  }
+}
+
+export async function dashboardUpdateProduct(req, res) {
+  try {
+    const shop = await resolveDashboardShop(req, res);
+    if (!shop) return null;
+
+    const parsed = productPriceUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: 'invalid_price' });
+    }
+
+    const product = await updateDashboardProductPrices(shop, req.params.id, parsed.data);
+    if (!product) {
+      return res.status(404).json({ ok: false, error: 'product_not_found' });
+    }
+
+    return res.status(200).json({ ok: true, product });
   } catch (error) {
     return handleDashboardError(req, res, error);
   }

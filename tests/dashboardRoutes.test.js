@@ -15,6 +15,7 @@ const getTurnoverByItemMock = vi.hoisted(() => vi.fn());
 const getRetailPriceTrendMock = vi.hoisted(() => vi.fn());
 const listDashboardProductsMock = vi.hoisted(() => vi.fn());
 const createDashboardProductMock = vi.hoisted(() => vi.fn());
+const updateDashboardProductPricesMock = vi.hoisted(() => vi.fn());
 const listDashboardCustomersMock = vi.hoisted(() => vi.fn());
 const previewProactiveCrmMock = vi.hoisted(() => vi.fn());
 
@@ -40,6 +41,7 @@ vi.mock('../src/services/bigqueryService.js', () => ({
 vi.mock('../src/services/productService.js', () => ({
   listDashboardProducts: listDashboardProductsMock,
   createDashboardProduct: createDashboardProductMock,
+  updateDashboardProductPrices: updateDashboardProductPricesMock,
 }));
 
 vi.mock('../src/services/crmPreviewService.js', () => ({
@@ -358,6 +360,44 @@ describe('dashboard routes', () => {
       .expect(200, { ok: true, id: 'product-2' });
 
     expect(createDashboardProductMock).toHaveBeenCalledWith(shop, payload);
+  });
+
+  it('updates a product price for the token shop', async () => {
+    const updated = {
+      id: 'product-1',
+      name: 'Aqua Galon 19L',
+      sellPrice: 25000,
+      costPrice: 17000,
+    };
+    updateDashboardProductPricesMock.mockResolvedValue(updated);
+
+    await request(app)
+      .patch('/api/dashboard/products/product-1')
+      .query({ token: 'dash-test' })
+      .send({ sellPrice: 25000 })
+      .expect(200, { ok: true, product: updated });
+
+    expect(updateDashboardProductPricesMock).toHaveBeenCalledWith(shop, 'product-1', {
+      sellPrice: 25000,
+    });
+  });
+
+  it('returns 404 when updating an unknown product', async () => {
+    updateDashboardProductPricesMock.mockResolvedValue(null);
+
+    await request(app)
+      .patch('/api/dashboard/products/nope')
+      .query({ token: 'dash-test' })
+      .send({ sellPrice: 25000 })
+      .expect(404, { ok: false, error: 'product_not_found' });
+  });
+
+  it('rejects a price update with no fields', async () => {
+    await request(app)
+      .patch('/api/dashboard/products/product-1')
+      .query({ token: 'dash-test' })
+      .send({})
+      .expect(400, { ok: false, error: 'invalid_price' });
   });
 
   it('rejects invalid product payloads', async () => {

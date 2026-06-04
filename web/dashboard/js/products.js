@@ -57,33 +57,91 @@ function setStatus(text, state = '') {
   formStatus.className = `form-status ${state}`.trim();
 }
 
+let productsCache = [];
+
+function escapeAttr(value) {
+  return String(value ?? '').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
+}
+
+function viewRow(product) {
+  return `<tr class="${product.lowStock ? 'low-stock' : ''}" data-row="${product.id}">
+        <td><span class="product-name">${escapeAttr(product.name)}</span></td>
+        <td>${escapeAttr(product.category) || '-'}</td>
+        <td><span class="${product.lowStock ? 'badge badge--danger' : 'badge badge--success'}">${Number(product.stock).toLocaleString('id-ID')} ${escapeAttr(product.unit) || ''}</span></td>
+        <td>${rupiah(product.sellPrice)}</td>
+        <td>${rupiah(product.costPrice)}</td>
+        <td>${Number(product.reorderPoint).toLocaleString('id-ID')}</td>
+        <td><button type="button" class="link-button" data-edit="${product.id}">Ubah Harga</button></td>
+      </tr>`;
+}
+
+function editRow(product) {
+  return `<tr data-row="${product.id}">
+        <td><span class="product-name">${escapeAttr(product.name)}</span></td>
+        <td>${escapeAttr(product.category) || '-'}</td>
+        <td>${Number(product.stock).toLocaleString('id-ID')} ${escapeAttr(product.unit) || ''}</td>
+        <td><input class="price-input" type="number" min="0" step="1" value="${product.sellPrice}" data-field="sellPrice" /></td>
+        <td><input class="price-input" type="number" min="0" step="1" value="${product.costPrice}" data-field="costPrice" /></td>
+        <td>${Number(product.reorderPoint).toLocaleString('id-ID')}</td>
+        <td class="row-actions">
+          <button type="button" class="link-button" data-save="${product.id}">Simpan</button>
+          <button type="button" class="link-button link-button--muted" data-cancel="${product.id}">Batal</button>
+        </td>
+      </tr>`;
+}
+
 function renderProducts(products) {
+  productsCache = products;
   productCountLabel.textContent = `${products.length} produk`;
 
   if (!products.length) {
     productsBody.innerHTML =
-      '<tr><td colspan="6"><div class="empty-state">Belum ada produk</div></td></tr>';
+      '<tr><td colspan="7"><div class="empty-state">Belum ada produk</div></td></tr>';
     return;
   }
 
-  productsBody.innerHTML = products
-    .map(
-      (product) => `<tr class="${product.lowStock ? 'low-stock' : ''}">
-        <td><span class="product-name">${product.name}</span></td>
-        <td>${product.category || '-'}</td>
-        <td><span class="${product.lowStock ? 'badge badge--danger' : 'badge badge--success'}">${Number(product.stock).toLocaleString('id-ID')} ${product.unit || ''}</span></td>
-        <td>${rupiah(product.sellPrice)}</td>
-        <td>${rupiah(product.costPrice)}</td>
-        <td>${Number(product.reorderPoint).toLocaleString('id-ID')}</td>
-      </tr>`,
-    )
-    .join('');
+  productsBody.innerHTML = products.map(viewRow).join('');
 }
+
+function startEdit(id) {
+  const product = productsCache.find((item) => item.id === id);
+  const row = productsBody.querySelector(`tr[data-row="${id}"]`);
+  if (product && row) {
+    row.outerHTML = editRow(product);
+  }
+}
+
+async function saveEdit(id) {
+  const row = productsBody.querySelector(`tr[data-row="${id}"]`);
+  if (!row) return;
+  const body = {};
+  row.querySelectorAll('input[data-field]').forEach((input) => {
+    body[input.dataset.field] = Number(input.value || 0);
+  });
+  try {
+    await api(`/api/dashboard/products/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    setStatus('Harga diperbarui.', 'is-success');
+    await loadProducts();
+  } catch (error) {
+    setStatus(error.message === 'product_not_found' ? 'Produk tidak ditemukan.' : 'Gagal memperbarui harga.', 'is-error');
+  }
+}
+
+productsBody.addEventListener('click', (event) => {
+  const { edit, save, cancel } = event.target.dataset;
+  if (edit) startEdit(edit);
+  else if (save) saveEdit(save);
+  else if (cancel) renderProducts(productsCache);
+});
 
 async function loadProducts() {
   if (!tokenInput.value.trim()) {
     productsBody.innerHTML =
-      '<tr><td colspan="6"><div class="empty-state">Masukkan dashboard token</div></td></tr>';
+      '<tr><td colspan="7"><div class="empty-state">Masukkan dashboard token</div></td></tr>';
     return;
   }
 
@@ -139,5 +197,5 @@ tokenInput.addEventListener('change', () => {
 syncLinks();
 loadProducts().catch(() => {
   productsBody.innerHTML =
-    '<tr><td colspan="6"><div class="empty-state">Produk belum tersedia</div></td></tr>';
+    '<tr><td colspan="7"><div class="empty-state">Produk belum tersedia</div></td></tr>';
 });

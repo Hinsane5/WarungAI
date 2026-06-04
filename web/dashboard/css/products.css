@@ -100,3 +100,38 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Inline price edit on the catalog table */
+.link-button {
+  border: 0;
+  background: none;
+  color: var(--wa-green-700);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.link-button--muted {
+  color: var(--wa-ink-500);
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.row-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.price-input {
+  width: 110px;
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid var(--wa-border);
+  border-radius: var(--r-sm);
+  padding: 6px 8px;
+  font: inherit;
+  font-weight: 600;
+}
