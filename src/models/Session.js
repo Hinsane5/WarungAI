@@ -20,6 +20,7 @@ const sessionSchema = new mongoose.Schema(
       pendingTransactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' },
       failureCount: { type: Number, default: 0 },
       lastQuestion: String,
+      pendingPriceItem: { type: mongoose.Schema.Types.Mixed },
     },
     lastActivityAt: { type: Date, default: Date.now, index: true },
   },

@@ -5,7 +5,7 @@ import { config } from '../config/index.js';
 import { sendText } from '../messaging/whatsapp.js';
 import { Product } from '../models/Product.js';
 import { Transaction } from '../models/Transaction.js';
-import { resolveProduct, learnAlias } from './productService.js';
+import { createPricedProduct, resolveProduct, learnAlias } from './productService.js';
 import { setSessionState } from './sessionService.js';
 
 const YES_REPLIES = new Set(['y', 'ya', 'iya', 'betul', 'benar', 'ok', 'oke']);
@@ -65,16 +65,6 @@ function cashDeltaForItems(items) {
   }, 0);
 }
 
-function findMissingPrice(items) {
-  return items.find((item) => !item.unitPrice);
-}
-
-function priceQuestionForItem(item) {
-  const actionText = actionLabel(item.action);
-  const priceKind = item.action === 'sale' ? 'harga jual' : 'harga modal';
-  return `Berapa ${priceKind} ${item.name}? Kirim ulang dengan harga, contoh: ${actionText} ${formatQty(item)} ${item.rawName} 20000.`;
-}
-
 function formatMoney(value) {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -89,6 +79,64 @@ function actionLabel(action) {
 
 function formatQty(item) {
   return `${item.qty}${item.unit ? ` ${item.unit}` : ''}`;
+}
+
+function plainContext(context) {
+  return context?.toObject?.() ?? context ?? {};
+}
+
+function needsPriceForItem(extractedItem, product) {
+  if (extractedItem.unitPrice != null) {
+    return { costPrice: false, sellPrice: false };
+  }
+
+  if (!product) {
+    return {
+      costPrice: extractedItem.action === 'stock_in',
+      sellPrice: true,
+    };
+  }
+
+  return {
+    costPrice: extractedItem.action === 'stock_in' && product.costPrice == null,
+    sellPrice: extractedItem.action === 'sale' && product.sellPrice == null,
+  };
+}
+
+function hasPriceNeed(priceNeeds) {
+  return priceNeeds.costPrice || priceNeeds.sellPrice;
+}
+
+function priceQuestionForPendingItem(item) {
+  const unitText = item.unit ? ` per ${item.unit}` : '';
+  if (item.priceNeeds.costPrice && item.priceNeeds.sellPrice) {
+    return `Berapa harga modal dan harga jual${unitText} untuk ${item.name}? Balas: modal 120000 jual 150000.`;
+  }
+  if (item.priceNeeds.costPrice) {
+    return `Berapa harga modal${unitText} untuk ${item.name}? Balas: modal 120000.`;
+  }
+  return `Berapa harga jual${unitText} untuk ${item.name}? Balas: jual 150000.`;
+}
+
+function parseRupiah(value) {
+  const normalized = String(value ?? '').replace(/[^\d]/g, '');
+  if (!normalized) {
+    return null;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parsePriceReply(text) {
+  const normalized = String(text ?? '').toLowerCase();
+  const costMatch = normalized.match(/(?:modal|harga\s+modal|beli|kulak)\D*([\d.,]+)/iu);
+  const sellMatch = normalized.match(/(?:jual|harga\s+jual)\D*([\d.,]+)/iu);
+  const numbers = normalized.match(/\d[\d.,]*/gu)?.map(parseRupiah).filter(Boolean) ?? [];
+
+  return {
+    costPrice: costMatch ? parseRupiah(costMatch[1]) : numbers[0],
+    sellPrice: sellMatch ? parseRupiah(sellMatch[1]) : numbers.length > 1 ? numbers[1] : numbers[0],
+  };
 }
 
 function formatConfirmation(transaction) {
@@ -119,17 +167,51 @@ async function buildPendingItems(shopId, extractedItems, options = {}) {
         rawName: extractedItem.rawName,
         unit: extractedItem.unit,
       },
-      options,
+      { ...options, createIfMissing: false },
     );
-    const { unitPrice, lineTotal: itemTotal } = resolveLine(extractedItem, product);
 
-    resolvedProducts.push({ product, rawName });
+    const priceNeeds = needsPriceForItem(extractedItem, product);
+    if (hasPriceNeed(priceNeeds)) {
+      return {
+        items,
+        resolvedProducts,
+        missingPriceItem: {
+          rawName,
+          name: product?.name ?? rawName,
+          qty: extractedItem.qty,
+          unit: extractedItem.unit ?? product?.unit,
+          action: extractedItem.action,
+          productId: product?._id,
+          priceNeeds,
+        },
+      };
+    }
+
+    let finalProduct = product;
+    if (!finalProduct) {
+      const totalPrice = extractedItem.unitPrice ?? 0;
+      const unitPrice = extractedItem.qty > 0 ? Math.round(totalPrice / extractedItem.qty) : totalPrice;
+      finalProduct = await createPricedProduct(
+        {
+          shopId,
+          rawName,
+          unit: extractedItem.unit,
+          sellPrice: extractedItem.action === 'sale' ? unitPrice : undefined,
+          costPrice: extractedItem.action === 'stock_in' ? unitPrice : undefined,
+        },
+        options,
+      );
+    }
+
+    const { unitPrice, lineTotal: itemTotal } = resolveLine(extractedItem, finalProduct);
+
+    resolvedProducts.push({ product: finalProduct, rawName });
     items.push({
-      productId: product._id,
-      name: product.name,
+      productId: finalProduct._id,
+      name: finalProduct.name,
       rawName,
       qty: extractedItem.qty,
-      unit: extractedItem.unit ?? product.unit,
+      unit: extractedItem.unit ?? finalProduct.unit,
       action: extractedItem.action,
       unitPrice,
       lineTotal: itemTotal,
@@ -139,33 +221,7 @@ async function buildPendingItems(shopId, extractedItems, options = {}) {
   return { items, resolvedProducts };
 }
 
-export async function handleTextPos({ shop, session, message }) {
-  const extraction = await extractEntities({ text: message.text, shop });
-
-  if (
-    extraction.intent !== 'pos' ||
-    extraction.needsClarification ||
-    extraction.items.length === 0
-  ) {
-    await setSessionState(session, 'clarifying', {
-      lastQuestion: extraction.clarificationQuestion,
-    });
-    await sendText(message.from, extraction.clarificationQuestion);
-    return { action: 'clarifying' };
-  }
-
-  const { items } = await buildPendingItems(shop._id, extraction.items);
-  const missingPriceItem = findMissingPrice(items);
-
-  if (missingPriceItem) {
-    const question = priceQuestionForItem(missingPriceItem);
-    await setSessionState(session, 'clarifying', {
-      lastQuestion: question,
-    });
-    await sendText(message.from, question);
-    return { action: 'clarifying_missing_price' };
-  }
-
+async function createPendingTransaction({ shop, session, message, extraction, items }) {
   const transaction = await Transaction.create({
     shopId: shop._id,
     type: transactionTypeForItems(items),
@@ -183,8 +239,129 @@ export async function handleTextPos({ shop, session, message }) {
   await setSessionState(session, 'awaiting_confirmation', {
     pendingTransactionId: transaction._id,
     failureCount: 0,
+    pendingPriceItem: undefined,
   });
   await sendText(message.from, formatConfirmation(transaction));
+
+  return transaction;
+}
+
+export async function handleTextPos({ shop, session, message }) {
+  const extraction = await extractEntities({ text: message.text, shop });
+
+  if (
+    extraction.intent !== 'pos' ||
+    extraction.needsClarification ||
+    extraction.items.length === 0
+  ) {
+    await setSessionState(session, 'clarifying', {
+      lastQuestion: extraction.clarificationQuestion,
+    });
+    await sendText(message.from, extraction.clarificationQuestion);
+    return { action: 'clarifying' };
+  }
+
+  const { items, missingPriceItem } = await buildPendingItems(shop._id, extraction.items);
+
+  if (missingPriceItem) {
+    const question = priceQuestionForPendingItem(missingPriceItem);
+    await setSessionState(session, 'clarifying', {
+      lastQuestion: question,
+      pendingPriceItem: missingPriceItem,
+    });
+    await sendText(message.from, question);
+    return { action: 'clarifying_missing_price' };
+  }
+
+  const transaction = await createPendingTransaction({
+    shop,
+    session,
+    message,
+    extraction,
+    items,
+  });
+
+  return { action: 'pending_confirmation', transaction };
+}
+
+export async function handleMissingPriceReply({ shop, session, message }) {
+  const pendingPriceItem = plainContext(session.context).pendingPriceItem;
+
+  if (!pendingPriceItem) {
+    await setSessionState(session, 'idle', { pendingPriceItem: undefined });
+    return handleTextPos({ shop, session, message });
+  }
+
+  const prices = parsePriceReply(message.text);
+  const costPrice = pendingPriceItem.priceNeeds?.costPrice ? prices.costPrice : undefined;
+  const sellPrice = pendingPriceItem.priceNeeds?.sellPrice ? prices.sellPrice : undefined;
+  const stillMissing = {
+    costPrice: pendingPriceItem.priceNeeds?.costPrice && !costPrice,
+    sellPrice: pendingPriceItem.priceNeeds?.sellPrice && !sellPrice,
+  };
+
+  if (hasPriceNeed(stillMissing)) {
+    const question = priceQuestionForPendingItem({
+      ...pendingPriceItem,
+      priceNeeds: stillMissing,
+    });
+    await setSessionState(session, 'clarifying', {
+      lastQuestion: question,
+      pendingPriceItem: {
+        ...pendingPriceItem,
+        priceNeeds: stillMissing,
+      },
+    });
+    await sendText(message.from, question);
+    return { action: 'clarifying_missing_price' };
+  }
+
+  let product;
+  if (pendingPriceItem.productId) {
+    product = await Product.findById(pendingPriceItem.productId);
+    if (!product) {
+      await setSessionState(session, 'idle', { pendingPriceItem: undefined });
+      await sendText(message.from, 'Produk tidak ditemukan. Tolong kirim transaksi ulang.');
+      return { action: 'missing_product_for_price' };
+    }
+    if (costPrice != null) {
+      product.costPrice = costPrice;
+    }
+    if (sellPrice != null) {
+      product.sellPrice = sellPrice;
+    }
+    await product.save();
+  } else {
+    product = await createPricedProduct({
+      shopId: shop._id,
+      rawName: pendingPriceItem.rawName,
+      unit: pendingPriceItem.unit,
+      costPrice,
+      sellPrice,
+    });
+  }
+
+  const unitPrice = pendingPriceItem.action === 'sale' ? product.sellPrice : product.costPrice;
+  const item = {
+    productId: product._id,
+    name: product.name,
+    rawName: pendingPriceItem.rawName,
+    qty: pendingPriceItem.qty,
+    unit: pendingPriceItem.unit ?? product.unit,
+    action: pendingPriceItem.action,
+    unitPrice,
+    lineTotal: lineTotal(pendingPriceItem.qty, unitPrice),
+  };
+  const transaction = await createPendingTransaction({
+    shop,
+    session,
+    message: {
+      ...message,
+      text: `${pendingPriceItem.action === 'sale' ? 'laku' : 'masuk'} ${formatQty(item)} ${pendingPriceItem.rawName} ${message.text}`,
+    },
+    extraction: { confidence: 1 },
+    items: [item],
+  });
 
   return { action: 'pending_confirmation', transaction };
 }

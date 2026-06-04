@@ -6,6 +6,7 @@ const transactionCreateMock = vi.hoisted(() => vi.fn());
 const transactionFindOneMock = vi.hoisted(() => vi.fn());
 const productFindByIdMock = vi.hoisted(() => vi.fn());
 const resolveProductMock = vi.hoisted(() => vi.fn());
+const createPricedProductMock = vi.hoisted(() => vi.fn());
 const learnAliasMock = vi.hoisted(() => vi.fn());
 const setSessionStateMock = vi.hoisted(() => vi.fn());
 const mongoTransactionMock = vi.hoisted(() => vi.fn());
@@ -41,6 +42,7 @@ vi.mock('../src/models/Product.js', () => ({
 
 vi.mock('../src/services/productService.js', () => ({
   resolveProduct: resolveProductMock,
+  createPricedProduct: createPricedProductMock,
   learnAlias: learnAliasMock,
 }));
 
@@ -48,7 +50,9 @@ vi.mock('../src/services/sessionService.js', () => ({
   setSessionState: setSessionStateMock,
 }));
 
-const { confirmPendingTransaction, handleTextPos } = await import('../src/services/posService.js');
+const { confirmPendingTransaction, handleMissingPriceReply, handleTextPos } = await import(
+  '../src/services/posService.js'
+);
 
 function createProduct(overrides = {}) {
   const product = {
@@ -145,6 +149,7 @@ describe('posService', () => {
     expect(setSessionStateMock).toHaveBeenCalledWith(session, 'awaiting_confirmation', {
       pendingTransactionId: 'txn-1',
       failureCount: 0,
+      pendingPriceItem: undefined,
     });
     expect(sendTextMock).toHaveBeenCalledWith(
       '+6281234567890',
@@ -182,23 +187,22 @@ describe('posService', () => {
 
     expect(transactionCreateMock).not.toHaveBeenCalled();
     expect(setSessionStateMock).toHaveBeenCalledWith(session, 'clarifying', {
-      lastQuestion: expect.stringContaining('harga jual Aqua Galon'),
+      lastQuestion: expect.stringContaining('harga jual per galon untuk Aqua Galon'),
+      pendingPriceItem: expect.objectContaining({
+        rawName: 'aqua',
+        productId: 'product-1',
+        priceNeeds: { costPrice: false, sellPrice: true },
+      }),
     });
     expect(sendTextMock).toHaveBeenCalledWith(
       '+6281234567890',
-      expect.stringContaining('Kirim ulang dengan harga'),
+      expect.stringContaining('Balas: jual 150000'),
     );
     expect(result.action).toBe('clarifying_missing_price');
   });
 
-  it('asks for cost price instead of recording a zero-rupiah stock-in', async () => {
-    const product = createProduct({
-      _id: 'product-1',
-      name: 'Pocari 1 Liter',
-      sellPrice: undefined,
-      costPrice: undefined,
-    });
-    resolveProductMock.mockResolvedValue({ product, rawName: 'pocari 1 liter', created: true });
+  it('asks for prices and does not create an unknown stock-in product yet', async () => {
+    resolveProductMock.mockResolvedValue({ product: null, rawName: 'pocari 1 liter', created: false });
     extractEntitiesMock.mockResolvedValue({
       intent: 'pos',
       items: [
@@ -227,14 +231,105 @@ describe('posService', () => {
     });
 
     expect(transactionCreateMock).not.toHaveBeenCalled();
+    expect(createPricedProductMock).not.toHaveBeenCalled();
+    expect(resolveProductMock).toHaveBeenCalledWith(
+      {
+        shopId: 'shop-1',
+        rawName: 'pocari 1 liter',
+        unit: 'dus',
+      },
+      { createIfMissing: false },
+    );
     expect(setSessionStateMock).toHaveBeenCalledWith(session, 'clarifying', {
-      lastQuestion: expect.stringContaining('harga modal Pocari 1 Liter'),
+      lastQuestion: expect.stringContaining('harga modal dan harga jual per dus'),
+      pendingPriceItem: {
+        rawName: 'pocari 1 liter',
+        name: 'pocari 1 liter',
+        qty: 2,
+        unit: 'dus',
+        action: 'stock_in',
+        productId: undefined,
+        priceNeeds: { costPrice: true, sellPrice: true },
+      },
     });
     expect(sendTextMock).toHaveBeenCalledWith(
       '+6281234567890',
-      expect.stringContaining('contoh: masuk 2 dus pocari 1 liter 20000'),
+      expect.stringContaining('Balas: modal 120000 jual 150000'),
     );
     expect(result.action).toBe('clarifying_missing_price');
+  });
+
+  it('creates the product only after a price-only reply and asks for Y/T', async () => {
+    const createdProduct = createProduct({
+      _id: 'product-new',
+      name: 'Pocari 1 Liter',
+      unit: 'dus',
+      costPrice: 120000,
+      sellPrice: 150000,
+    });
+    createPricedProductMock.mockResolvedValue(createdProduct);
+    transactionCreateMock.mockImplementation(async (payload) => ({
+      _id: 'txn-price',
+      ...payload,
+    }));
+    const session = createSession({
+      state: 'clarifying',
+      context: {
+        pendingPriceItem: {
+          rawName: 'pocari 1 liter',
+          name: 'pocari 1 liter',
+          qty: 2,
+          unit: 'dus',
+          action: 'stock_in',
+          priceNeeds: { costPrice: true, sellPrice: true },
+        },
+      },
+    });
+
+    const result = await handleMissingPriceReply({
+      shop: createShop(),
+      session,
+      message: {
+        from: '+6281234567890',
+        type: 'text',
+        text: 'modal 120000 jual 150000',
+        messageId: 'wamid-price-reply',
+      },
+    });
+
+    expect(createPricedProductMock).toHaveBeenCalledWith({
+      shopId: 'shop-1',
+      rawName: 'pocari 1 liter',
+      unit: 'dus',
+      costPrice: 120000,
+      sellPrice: 150000,
+    });
+    expect(transactionCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'pending',
+        whatsappMessageId: 'wamid-price-reply',
+        cashDelta: -240000,
+        items: [
+          expect.objectContaining({
+            productId: 'product-new',
+            name: 'Pocari 1 Liter',
+            qty: 2,
+            unitPrice: 120000,
+            lineTotal: 240000,
+          }),
+        ],
+      }),
+    );
+    expect(setSessionStateMock).toHaveBeenCalledWith(session, 'awaiting_confirmation', {
+      pendingTransactionId: 'txn-price',
+      failureCount: 0,
+      pendingPriceItem: undefined,
+    });
+    expect(sendTextMock).toHaveBeenCalledWith(
+      '+6281234567890',
+      expect.stringContaining('Benar? Balas Y / T'),
+    );
+    expect(result.action).toBe('pending_confirmation');
   });
 
   it('persists voice source confidence and flags low-confidence STT in confirmation', async () => {

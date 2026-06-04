@@ -16,6 +16,7 @@ function idleContext() {
     pendingTransactionId: undefined,
     failureCount: 0,
     lastQuestion: undefined,
+    pendingPriceItem: undefined,
   };
 }
 

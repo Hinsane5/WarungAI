@@ -154,6 +154,10 @@ export async function resolveProduct({ shopId, rawName, unit }, options = {}) {
     return { product, created: false, rawName };
   }
 
+  if (options.createIfMissing === false) {
+    return { product: null, created: false, rawName };
+  }
+
   let createdProduct;
   try {
     createdProduct = await Product.create(
@@ -184,6 +188,52 @@ export async function resolveProduct({ shopId, rawName, unit }, options = {}) {
   }
 
   return { product: createdProduct[0], created: true, rawName };
+}
+
+export async function createPricedProduct({ shopId, rawName, unit, sellPrice, costPrice }, options = {}) {
+  let product;
+  try {
+    [product] = await Product.create(
+      [
+        {
+          shopId,
+          name: titleCase(rawName),
+          aliases: [normalizeName(rawName)],
+          unit,
+          stock: 0,
+          sellPrice,
+          costPrice,
+        },
+      ],
+      options.session ? { session: options.session } : undefined,
+    );
+  } catch (error) {
+    if (error?.code !== 11000) {
+      throw error;
+    }
+
+    const refreshedProducts = await productsForResolution(shopId, options.session);
+    product = findExistingProduct(refreshedProducts, rawName);
+
+    if (!product) {
+      throw error;
+    }
+
+    if (sellPrice != null && product.sellPrice == null) {
+      product.sellPrice = sellPrice;
+    }
+    if (costPrice != null && product.costPrice == null) {
+      product.costPrice = costPrice;
+    }
+    if (unit && !product.unit) {
+      product.unit = unit;
+    }
+    if (typeof product.save === 'function') {
+      await product.save(options.session ? { session: options.session } : undefined);
+    }
+  }
+
+  return product;
 }
 
 export async function learnAlias(product, rawName) {

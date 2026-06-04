@@ -10,7 +10,7 @@ vi.mock('../src/models/Product.js', () => ({
   },
 }));
 
-const { createDashboardProduct, listDashboardProducts, resolveProduct } =
+const { createDashboardProduct, createPricedProduct, listDashboardProducts, resolveProduct } =
   await import('../src/services/productService.js');
 
 const shop = { _id: 'shop-1' };
@@ -173,5 +173,47 @@ describe('productService dashboard catalog', () => {
     const result = await resolveProduct({ shopId: 'shop-1', rawName: 'gula aren', unit: null });
     expect(result.created).toBe(true);
     expect(productCreateMock).toHaveBeenCalled();
+  });
+
+  it('can resolve without creating missing chat products', async () => {
+    productFindMock.mockResolvedValue([]);
+
+    await expect(
+      resolveProduct(
+        { shopId: 'shop-1', rawName: 'milo 500 gram', unit: 'dus' },
+        { createIfMissing: false },
+      ),
+    ).resolves.toEqual({ product: null, created: false, rawName: 'milo 500 gram' });
+    expect(productCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('creates priced products from price clarification replies', async () => {
+    const product = { _id: 'p4', name: 'Milo 500 Gram' };
+    productCreateMock.mockResolvedValue([product]);
+
+    await expect(
+      createPricedProduct({
+        shopId: 'shop-1',
+        rawName: 'milo 500 gram',
+        unit: 'dus',
+        costPrice: 120000,
+        sellPrice: 150000,
+      }),
+    ).resolves.toBe(product);
+
+    expect(productCreateMock).toHaveBeenCalledWith(
+      [
+        {
+          shopId: 'shop-1',
+          name: 'Milo 500 Gram',
+          aliases: ['milo 500 gram'],
+          unit: 'dus',
+          stock: 0,
+          sellPrice: 150000,
+          costPrice: 120000,
+        },
+      ],
+      undefined,
+    );
   });
 });

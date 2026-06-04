@@ -14,9 +14,14 @@ export {
   generateDashboardToken,
   generateLoyaltyQrSlug,
 } from './shopService.js';
-export { confirmPendingTransaction, handleTextPos } from './posService.js';
+export {
+  confirmPendingTransaction,
+  handleMissingPriceReply,
+  handleTextPos,
+} from './posService.js';
 export {
   createDashboardProduct,
+  createPricedProduct,
   learnAlias,
   listDashboardProducts,
   resolveProduct,

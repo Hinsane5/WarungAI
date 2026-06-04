@@ -7,7 +7,11 @@ import {
   handleKasbon,
   parseReminderCommand,
 } from '../services/kasbonService.js';
-import { confirmPendingTransaction, handleTextPos } from '../services/posService.js';
+import {
+  confirmPendingTransaction,
+  handleMissingPriceReply,
+  handleTextPos,
+} from '../services/posService.js';
 import { handleScheduleCommand, parseScheduleCommand } from '../services/scheduleService.js';
 import { findOrCreateByOwnerPhone } from '../services/shopService.js';
 import { getOrCreateSession } from '../services/sessionService.js';
@@ -114,6 +118,10 @@ export async function routeInboundMessage(message) {
 
   if (session.state === 'awaiting_confirmation') {
     return confirmPendingTransaction({ shop, session, message });
+  }
+
+  if (session.state === 'clarifying' && session.context?.pendingPriceItem) {
+    return handleMissingPriceReply({ shop, session, message });
   }
 
   if (session.state === 'awaiting_kasbon_reminder_approval') {

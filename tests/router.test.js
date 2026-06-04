@@ -4,6 +4,7 @@ const findOrCreateByOwnerPhoneMock = vi.hoisted(() => vi.fn());
 const getOrCreateSessionMock = vi.hoisted(() => vi.fn());
 const handleTextPosMock = vi.hoisted(() => vi.fn());
 const confirmPendingTransactionMock = vi.hoisted(() => vi.fn());
+const handleMissingPriceReplyMock = vi.hoisted(() => vi.fn());
 const handleKasbonMock = vi.hoisted(() => vi.fn());
 const draftKasbonReminderMock = vi.hoisted(() => vi.fn());
 const approveKasbonReminderMock = vi.hoisted(() => vi.fn());
@@ -22,6 +23,7 @@ vi.mock('../src/services/sessionService.js', () => ({
 
 vi.mock('../src/services/posService.js', () => ({
   handleTextPos: handleTextPosMock,
+  handleMissingPriceReply: handleMissingPriceReplyMock,
   confirmPendingTransaction: confirmPendingTransactionMock,
 }));
 
@@ -54,6 +56,7 @@ describe('routeInboundMessage', () => {
     });
     getOrCreateSessionMock.mockResolvedValue({ _id: 'session-1', state: 'idle' });
     handleTextPosMock.mockResolvedValue({ action: 'pending_confirmation' });
+    handleMissingPriceReplyMock.mockResolvedValue({ action: 'pending_confirmation' });
     confirmPendingTransactionMock.mockResolvedValue({ action: 'committed' });
     handleKasbonMock.mockResolvedValue({ action: 'kasbon_recorded' });
     draftKasbonReminderMock.mockResolvedValue({ action: 'kasbon_reminder_drafted' });
@@ -151,6 +154,30 @@ describe('routeInboundMessage', () => {
       session,
       message,
     });
+  });
+
+  it('routes pending price replies before normal POS handling', async () => {
+    const session = {
+      _id: 'session-1',
+      state: 'clarifying',
+      context: { pendingPriceItem: { rawName: 'milo 500 gram' } },
+    };
+    getOrCreateSessionMock.mockResolvedValue(session);
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: 'modal 120000 jual 150000',
+    };
+
+    await routeInboundMessage(message);
+
+    expect(handleMissingPriceReplyMock).toHaveBeenCalledWith({
+      shop: { _id: 'shop-1' },
+      session,
+      message,
+    });
+    expect(handleTextPosMock).not.toHaveBeenCalled();
   });
 
   it('routes kasbon commands to the kasbon handler', async () => {
