@@ -13,6 +13,12 @@ function titleCase(value) {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+function nameTokens(value) {
+  return normalizeName(value)
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
 function productMatches(product, rawName) {
   const normalizedRawName = normalizeName(rawName);
 
@@ -21,6 +27,54 @@ function productMatches(product, rawName) {
   }
 
   return (product.aliases ?? []).some((alias) => normalizeName(alias) === normalizedRawName);
+}
+
+// Partial-name match: every word the owner typed must appear as a whole word in the
+// product's name or one of its aliases ("gula" -> "Gula 1kg", "indomie" -> "Indomie
+// Goreng"). Ranked by fewest extra words, then shortest name, so the closest, most
+// stable candidate wins. Returns null when nothing is a clear superset of the input.
+function fuzzyMatchProduct(products, rawName) {
+  const rawTokens = nameTokens(rawName);
+
+  if (rawTokens.length === 0) {
+    return null;
+  }
+
+  let best = null;
+  for (const product of products) {
+    const candidates = [product.name, ...(product.aliases ?? [])];
+    let extra = Infinity;
+
+    for (const candidate of candidates) {
+      const candidateTokens = nameTokens(candidate);
+
+      if (candidateTokens.length === 0) {
+        continue;
+      }
+
+      if (rawTokens.every((token) => candidateTokens.includes(token))) {
+        extra = Math.min(extra, candidateTokens.length - rawTokens.length);
+      }
+    }
+
+    if (extra === Infinity) {
+      continue;
+    }
+
+    const nameLength = normalizeName(product.name).length;
+    if (!best || extra < best.extra || (extra === best.extra && nameLength < best.nameLength)) {
+      best = { product, extra, nameLength };
+    }
+  }
+
+  return best?.product ?? null;
+}
+
+function findExistingProduct(products, rawName) {
+  return (
+    products.find((candidate) => productMatches(candidate, rawName)) ??
+    fuzzyMatchProduct(products, rawName)
+  );
 }
 
 function lowStock(product) {
@@ -94,7 +148,7 @@ export async function createDashboardProduct(shop, input) {
 
 export async function resolveProduct({ shopId, rawName, unit }, options = {}) {
   const products = await productsForResolution(shopId, options.session);
-  const product = products.find((candidate) => productMatches(candidate, rawName));
+  const product = findExistingProduct(products, rawName);
 
   if (product) {
     return { product, created: false, rawName };
@@ -120,9 +174,7 @@ export async function resolveProduct({ shopId, rawName, unit }, options = {}) {
     }
 
     const refreshedProducts = await productsForResolution(shopId, options.session);
-    const refreshedProduct = refreshedProducts.find((candidate) =>
-      productMatches(candidate, rawName),
-    );
+    const refreshedProduct = findExistingProduct(refreshedProducts, rawName);
 
     if (!refreshedProduct) {
       throw error;

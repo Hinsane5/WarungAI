@@ -145,4 +145,33 @@ describe('productService dashboard catalog', () => {
       resolveProduct({ shopId: 'shop-1', rawName: 'aqua galon', unit: 'galon' }),
     ).rejects.toBe(error);
   });
+
+  it('fuzzy-matches a partial name to an existing product (gula -> Gula 1kg)', async () => {
+    const product = { _id: 'g1', name: 'Gula 1kg', aliases: ['gula 1kg'], sellPrice: 16000 };
+    productFindMock.mockResolvedValue([product]);
+
+    await expect(
+      resolveProduct({ shopId: 'shop-1', rawName: 'gula', unit: null }),
+    ).resolves.toEqual({ product, created: false, rawName: 'gula' });
+    expect(productCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('picks the closest product when several share the typed word', async () => {
+    const gula1kg = { _id: 'g1', name: 'Gula 1kg', aliases: ['gula 1kg'] };
+    const gulaArenBesar = { _id: 'g2', name: 'Gula Aren Besar', aliases: ['gula aren besar'] };
+    productFindMock.mockResolvedValue([gulaArenBesar, gula1kg]);
+
+    const result = await resolveProduct({ shopId: 'shop-1', rawName: 'gula', unit: null });
+    expect(result.product).toBe(gula1kg); // fewer extra words than "Gula Aren Besar"
+  });
+
+  it('does not fuzzy-match when the typed name is more specific than any product', async () => {
+    const product = { _id: 'g1', name: 'Gula 1kg', aliases: ['gula 1kg'] };
+    productFindMock.mockResolvedValue([product]);
+    productCreateMock.mockResolvedValue([{ _id: 'new', name: 'Gula Aren', aliases: ['gula aren'] }]);
+
+    const result = await resolveProduct({ shopId: 'shop-1', rawName: 'gula aren', unit: null });
+    expect(result.created).toBe(true);
+    expect(productCreateMock).toHaveBeenCalled();
+  });
 });
