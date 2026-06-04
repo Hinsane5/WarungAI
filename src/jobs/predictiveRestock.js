@@ -9,7 +9,7 @@ import { logger } from '../utils/logger.js';
 
 const MS_PER_DAY = 86_400_000;
 
-async function soldQtyByProduct({ shopId, since }) {
+export async function soldQtyByProduct({ shopId, since }) {
   const query = Transaction.find({
     shopId,
     type: 'sale',
@@ -31,7 +31,7 @@ async function soldQtyByProduct({ shopId, since }) {
   return map;
 }
 
-function formatLowStockMessage(flagged) {
+export function formatLowStockMessage(flagged) {
   const lines = ['Pengingat stok dari WarungAI:'];
   for (const f of flagged) {
     if (f.reason === 'expiring') {

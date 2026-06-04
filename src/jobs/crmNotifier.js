@@ -13,7 +13,7 @@ function plain(value) {
   return value?.toObject?.() ?? value;
 }
 
-function restockMessage({ shop, product, segment }) {
+export function restockMessage({ shop, product, segment }) {
   const shopName = shop.name ?? 'warung';
   return [
     `Halo! Sepertinya ${product?.name ?? 'barang rutin kamu'} sudah hampir habis.`,

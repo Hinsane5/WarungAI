@@ -16,6 +16,7 @@ const getRetailPriceTrendMock = vi.hoisted(() => vi.fn());
 const listDashboardProductsMock = vi.hoisted(() => vi.fn());
 const createDashboardProductMock = vi.hoisted(() => vi.fn());
 const listDashboardCustomersMock = vi.hoisted(() => vi.fn());
+const previewProactiveCrmMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/services/analyticsService.js', () => ({
   getShopByDashboardToken: getShopByDashboardTokenMock,
@@ -39,6 +40,10 @@ vi.mock('../src/services/bigqueryService.js', () => ({
 vi.mock('../src/services/productService.js', () => ({
   listDashboardProducts: listDashboardProductsMock,
   createDashboardProduct: createDashboardProductMock,
+}));
+
+vi.mock('../src/services/crmPreviewService.js', () => ({
+  previewProactiveCrm: previewProactiveCrmMock,
 }));
 
 const { app } = await import('../src/app.js');
@@ -276,6 +281,39 @@ describe('dashboard routes', () => {
 
   it('requires a dashboard token for product API requests', async () => {
     await request(app).get('/api/dashboard/products').expect(401, {
+      ok: false,
+      error: 'dashboard_token_required',
+    });
+  });
+
+  it('returns the proactive CRM preview for the token shop', async () => {
+    const preview = {
+      mode: 'preview',
+      summary: {
+        customersSegmented: 2,
+        ownerAlerts: 1,
+        customerReminders: 1,
+        koinBotBalance: 50,
+        koinBotNeeded: 1,
+      },
+      ownerAlert: { to: '+62811', message: 'Pengingat stok dari WarungAI:' },
+      customerReminders: [
+        { name: 'Budi', phone: '+62812', segment: 'loyal', productName: 'Aqua', message: 'Halo!' },
+      ],
+      segments: [{ name: 'Budi', phone: '+62812', segment: 'loyal' }],
+    };
+    previewProactiveCrmMock.mockResolvedValue(preview);
+
+    await request(app)
+      .get('/api/dashboard/crm/preview')
+      .query({ token: 'dash-test' })
+      .expect(200, preview);
+
+    expect(previewProactiveCrmMock).toHaveBeenCalledWith(shop);
+  });
+
+  it('requires a dashboard token for the CRM preview', async () => {
+    await request(app).get('/api/dashboard/crm/preview').expect(401, {
       ok: false,
       error: 'dashboard_token_required',
     });

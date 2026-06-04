@@ -214,6 +214,86 @@ async function loadCreditScores() {
   );
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function messageHtml(text) {
+  return escapeHtml(text).replaceAll('\n', '<br>');
+}
+
+const crmPreviewButton = document.querySelector('#crmPreviewButton');
+
+async function loadCrmPreview() {
+  const result = document.querySelector('#crmPreviewResult');
+  if (!result) {
+    return;
+  }
+  if (!tokenInput.value.trim()) {
+    result.innerHTML = '<div class="empty-state">Masukkan dashboard token dulu.</div>';
+    return;
+  }
+
+  result.innerHTML = '<div class="empty-state">Menjalankan preview…</div>';
+  try {
+    const data = await api('/api/dashboard/crm/preview');
+    const s = data.summary;
+    const parts = [
+      `<div class="crm-preview__summary">${s.customersSegmented} pelanggan tersegmentasi · ${s.customerReminders} pengingat pelanggan · ${s.ownerAlerts} alert pemilik · Koin Bot ${s.koinBotNeeded}/${s.koinBotBalance}</div>`,
+    ];
+
+    if (data.ownerAlert) {
+      parts.push(
+        `<div class="crm-msg"><div class="crm-msg__head">Alert Pemilik → ${escapeHtml(
+          data.ownerAlert.to,
+        )}</div><div class="crm-msg__body">${messageHtml(data.ownerAlert.message)}</div></div>`,
+      );
+    }
+
+    if (data.customerReminders.length) {
+      for (const reminder of data.customerReminders) {
+        parts.push(
+          `<div class="crm-msg"><div class="crm-msg__head">${escapeHtml(
+            reminder.name,
+          )} <span class="badge">${escapeHtml(reminder.segment)}</span> → ${escapeHtml(
+            reminder.phone,
+          )}</div><div class="crm-msg__body">${messageHtml(reminder.message)}</div></div>`,
+        );
+      }
+    } else {
+      parts.push(
+        '<div class="muted">Tidak ada pengingat belanja yang jatuh tempo hari ini.</div>',
+      );
+    }
+
+    if (data.segments.length) {
+      const counts = {};
+      for (const seg of data.segments) {
+        counts[seg.segment] = (counts[seg.segment] || 0) + 1;
+      }
+      const chips = Object.entries(counts)
+        .map(([seg, count]) => `<span class="badge">${escapeHtml(seg)}: ${count}</span>`)
+        .join(' ');
+      parts.push(`<div class="crm-preview__segments">Segmen RFM: ${chips}</div>`);
+    }
+
+    result.innerHTML = parts.join('');
+  } catch (error) {
+    result.innerHTML = `<div class="empty-state">Gagal menjalankan preview (${escapeHtml(
+      error.message,
+    )}).</div>`;
+  }
+}
+
+if (crmPreviewButton) {
+  crmPreviewButton.addEventListener('click', loadCrmPreview);
+}
+
 async function loadDashboard() {
   if (!tokenInput.value.trim()) {
     document.querySelector('#shopName').textContent = 'Masukkan dashboard token';

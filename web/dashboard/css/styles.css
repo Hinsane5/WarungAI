@@ -422,3 +422,44 @@ select {
     height: 250px;
   }
 }
+
+/* Proactive CRM preview: captured messages + segment summary */
+.crm-preview__summary {
+  font-weight: 700;
+  color: var(--wa-ink-700);
+  margin-bottom: 4px;
+}
+
+.crm-msg {
+  border: 1px solid var(--wa-border);
+  border-radius: var(--r-md);
+  background: var(--wa-surface-2);
+  padding: 12px 14px;
+}
+
+.crm-msg__head {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--wa-ink-900);
+  margin-bottom: 6px;
+}
+
+.crm-msg__body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--wa-ink-700);
+}
+
+.crm-preview__segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  color: var(--wa-ink-500);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+#crmPreviewResult {
+  gap: 12px;
+}

@@ -19,6 +19,7 @@ import {
   getTurnoverByItem,
 } from '../services/bigqueryService.js';
 import { createDashboardProduct, listDashboardProducts } from '../services/productService.js';
+import { previewProactiveCrm } from '../services/crmPreviewService.js';
 
 const landingHtml = readFileSync(
   new URL('../../web/dashboard/landing.html', import.meta.url),
@@ -147,6 +148,16 @@ export async function dashboardSummary(req, res) {
     const shop = await resolveDashboardShop(req, res);
     if (!shop) return null;
     return res.status(200).json(await getDashboardSummary(shop));
+  } catch (error) {
+    return handleDashboardError(req, res, error);
+  }
+}
+
+export async function dashboardCrmPreview(req, res) {
+  try {
+    const shop = await resolveDashboardShop(req, res);
+    if (!shop) return null;
+    return res.status(200).json(await previewProactiveCrm(shop));
   } catch (error) {
     return handleDashboardError(req, res, error);
   }

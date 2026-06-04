@@ -8,6 +8,7 @@ import {
   dashboardB2bTurnover,
   dashboardCategoryMix,
   dashboardCreateProduct,
+  dashboardCrmPreview,
   dashboardCustomers,
   dashboardCreditScores,
   dashboardExport,
@@ -34,4 +35,5 @@ apiRouter.get('/api/dashboard/category-mix', dashboardCategoryMix);
 apiRouter.get('/api/dashboard/top-items', dashboardTopItems);
 apiRouter.get('/api/dashboard/predictive-restock', dashboardPredictiveRestock);
 apiRouter.get('/api/dashboard/credit-scores', dashboardCreditScores);
+apiRouter.get('/api/dashboard/crm/preview', dashboardCrmPreview);
 apiRouter.get('/api/dashboard/export', dashboardExport);
