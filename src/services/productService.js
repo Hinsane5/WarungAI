@@ -135,6 +135,25 @@ export async function listDashboardProducts(shop) {
   return products.map(toDashboardProduct);
 }
 
+export async function findProductByName({ shopId, rawName }, options = {}) {
+  const products = await productsForResolution(shopId, options.session);
+  return findExistingProduct(products, rawName);
+}
+
+export async function updateProductPrice({ shopId, productId, rawName, priceType, price }) {
+  const product = productId
+    ? await Product.findOne({ _id: productId, shopId })
+    : await findProductByName({ shopId, rawName });
+
+  if (!product) {
+    return null;
+  }
+
+  product[priceType] = price;
+  await product.save();
+  return product;
+}
+
 export async function createDashboardProduct(shop, input) {
   const products = await Product.find({ shopId: shop._id });
   const duplicate = products.find(

@@ -12,6 +12,11 @@ import {
   handleMissingPriceReply,
   handleTextPos,
 } from '../services/posService.js';
+import {
+  handlePendingPriceUpdateReply,
+  handlePriceUpdateCommand,
+  parsePriceUpdateCommand,
+} from '../services/priceCommandService.js';
 import { handleScheduleCommand, parseScheduleCommand } from '../services/scheduleService.js';
 import { findOrCreateByOwnerPhone } from '../services/shopService.js';
 import { getOrCreateSession } from '../services/sessionService.js';
@@ -124,6 +129,10 @@ export async function routeInboundMessage(message) {
     return handleMissingPriceReply({ shop, session, message });
   }
 
+  if (session.state === 'clarifying' && session.context?.pendingPriceUpdate) {
+    return handlePendingPriceUpdateReply({ shop, session, message });
+  }
+
   if (session.state === 'awaiting_kasbon_reminder_approval') {
     return approveKasbonReminder({ shop, session, message });
   }
@@ -138,6 +147,10 @@ export async function routeInboundMessage(message) {
 
   if (parseReminderCommand(message.text)) {
     return draftKasbonReminder({ shop, session, message });
+  }
+
+  if (parsePriceUpdateCommand(message.text)) {
+    return handlePriceUpdateCommand({ shop, session, message });
   }
 
   if (session.state === 'fast_text_fallback') {

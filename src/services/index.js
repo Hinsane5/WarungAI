@@ -22,10 +22,17 @@ export {
 export {
   createDashboardProduct,
   createPricedProduct,
+  findProductByName,
   learnAlias,
   listDashboardProducts,
   resolveProduct,
+  updateProductPrice,
 } from './productService.js';
+export {
+  handlePendingPriceUpdateReply,
+  handlePriceUpdateCommand,
+  parsePriceUpdateCommand,
+} from './priceCommandService.js';
 export { getOrCreateSession, setSessionState } from './sessionService.js';
 export {
   approveKasbonReminder,

@@ -17,6 +17,7 @@ function idleContext() {
     failureCount: 0,
     lastQuestion: undefined,
     pendingPriceItem: undefined,
+    pendingPriceUpdate: undefined,
   };
 }
 

@@ -5,6 +5,9 @@ const getOrCreateSessionMock = vi.hoisted(() => vi.fn());
 const handleTextPosMock = vi.hoisted(() => vi.fn());
 const confirmPendingTransactionMock = vi.hoisted(() => vi.fn());
 const handleMissingPriceReplyMock = vi.hoisted(() => vi.fn());
+const handlePendingPriceUpdateReplyMock = vi.hoisted(() => vi.fn());
+const handlePriceUpdateCommandMock = vi.hoisted(() => vi.fn());
+const parsePriceUpdateCommandMock = vi.hoisted(() => vi.fn());
 const handleKasbonMock = vi.hoisted(() => vi.fn());
 const draftKasbonReminderMock = vi.hoisted(() => vi.fn());
 const approveKasbonReminderMock = vi.hoisted(() => vi.fn());
@@ -25,6 +28,12 @@ vi.mock('../src/services/posService.js', () => ({
   handleTextPos: handleTextPosMock,
   handleMissingPriceReply: handleMissingPriceReplyMock,
   confirmPendingTransaction: confirmPendingTransactionMock,
+}));
+
+vi.mock('../src/services/priceCommandService.js', () => ({
+  handlePendingPriceUpdateReply: handlePendingPriceUpdateReplyMock,
+  handlePriceUpdateCommand: handlePriceUpdateCommandMock,
+  parsePriceUpdateCommand: parsePriceUpdateCommandMock,
 }));
 
 vi.mock('../src/services/kasbonService.js', () => ({
@@ -57,6 +66,9 @@ describe('routeInboundMessage', () => {
     getOrCreateSessionMock.mockResolvedValue({ _id: 'session-1', state: 'idle' });
     handleTextPosMock.mockResolvedValue({ action: 'pending_confirmation' });
     handleMissingPriceReplyMock.mockResolvedValue({ action: 'pending_confirmation' });
+    handlePendingPriceUpdateReplyMock.mockResolvedValue({ action: 'price_updated' });
+    handlePriceUpdateCommandMock.mockResolvedValue({ action: 'clarifying_price_update' });
+    parsePriceUpdateCommandMock.mockReturnValue(null);
     confirmPendingTransactionMock.mockResolvedValue({ action: 'committed' });
     handleKasbonMock.mockResolvedValue({ action: 'kasbon_recorded' });
     draftKasbonReminderMock.mockResolvedValue({ action: 'kasbon_reminder_drafted' });
@@ -175,6 +187,53 @@ describe('routeInboundMessage', () => {
     expect(handleMissingPriceReplyMock).toHaveBeenCalledWith({
       shop: { _id: 'shop-1' },
       session,
+      message,
+    });
+    expect(handleTextPosMock).not.toHaveBeenCalled();
+  });
+
+  it('routes pending catalog price update replies before normal POS handling', async () => {
+    const session = {
+      _id: 'session-1',
+      state: 'clarifying',
+      context: { pendingPriceUpdate: { productId: 'product-1', priceType: 'sellPrice' } },
+    };
+    getOrCreateSessionMock.mockResolvedValue(session);
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: '15000',
+    };
+
+    await routeInboundMessage(message);
+
+    expect(handlePendingPriceUpdateReplyMock).toHaveBeenCalledWith({
+      shop: { _id: 'shop-1' },
+      session,
+      message,
+    });
+    expect(handleTextPosMock).not.toHaveBeenCalled();
+  });
+
+  it('routes catalog price commands before POS parsing', async () => {
+    parsePriceUpdateCommandMock.mockReturnValue({
+      priceType: 'sellPrice',
+      rawName: 'beras 15kg',
+      price: null,
+    });
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: 'ubah harga jual beras 15kg',
+    };
+
+    await routeInboundMessage(message);
+
+    expect(handlePriceUpdateCommandMock).toHaveBeenCalledWith({
+      shop: { _id: 'shop-1' },
+      session: { _id: 'session-1', state: 'idle' },
       message,
     });
     expect(handleTextPosMock).not.toHaveBeenCalled();
