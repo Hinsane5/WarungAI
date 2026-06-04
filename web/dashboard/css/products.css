@@ -135,3 +135,15 @@
   font: inherit;
   font-weight: 600;
 }
+
+/* Tidy the Aksi column: shrink to content, keep the button on one line, left-aligned */
+.products-table th:last-child,
+.products-table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.link-button {
+  white-space: nowrap;
+}

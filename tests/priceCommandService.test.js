@@ -55,6 +55,70 @@ describe('priceCommandService', () => {
     });
   });
 
+  it('treats a bare "ubah harga <produk>" as ambiguous (no price kind)', () => {
+    expect(parsePriceUpdateCommand('ubah harga aqua galon')).toEqual({
+      priceType: null,
+      rawName: 'aqua galon',
+      price: null,
+    });
+  });
+
+  it('asks which price kind for a bare "ubah harga" command', async () => {
+    const product = { _id: 'product-9', name: 'Aqua Galon 19L' };
+    findProductByNameMock.mockResolvedValue(product);
+    const session = createSession();
+
+    const result = await handlePriceUpdateCommand({
+      shop: createShop(),
+      session,
+      message: { from: '+62812', text: 'ubah harga aqua galon' },
+    });
+
+    expect(setSessionStateMock).toHaveBeenCalledWith(session, 'clarifying', {
+      lastQuestion: expect.stringContaining('harga jual atau harga modal'),
+      pendingPriceUpdate: {
+        productId: 'product-9',
+        productName: 'Aqua Galon 19L',
+        priceType: null,
+        price: null,
+      },
+    });
+    expect(updateProductPriceMock).not.toHaveBeenCalled();
+    expect(result.action).toBe('clarifying_price_update_kind');
+  });
+
+  it('after the kind reply ("jual"), asks for the new price', async () => {
+    const session = createSession({
+      state: 'clarifying',
+      context: {
+        pendingPriceUpdate: {
+          productId: 'product-9',
+          productName: 'Aqua Galon 19L',
+          priceType: null,
+          price: null,
+        },
+      },
+    });
+
+    const result = await handlePendingPriceUpdateReply({
+      shop: createShop(),
+      session,
+      message: { from: '+62812', text: 'jual' },
+    });
+
+    expect(updateProductPriceMock).not.toHaveBeenCalled();
+    expect(setSessionStateMock).toHaveBeenCalledWith(session, 'clarifying', {
+      lastQuestion: expect.stringContaining('harga jual baru untuk Aqua Galon 19L'),
+      pendingPriceUpdate: {
+        productId: 'product-9',
+        productName: 'Aqua Galon 19L',
+        priceType: 'sellPrice',
+        price: null,
+      },
+    });
+    expect(result.action).toBe('clarifying_price_update');
+  });
+
   it('asks for the new price when command has no price value', async () => {
     const product = { _id: 'product-1', name: 'Beras 15 Kg' };
     findProductByNameMock.mockResolvedValue(product);
