@@ -95,6 +95,29 @@ function toDashboardProduct(product) {
   };
 }
 
+async function applyProductDefaults(product, { sellPrice, costPrice, unit }, options = {}) {
+  let changed = false;
+
+  if (sellPrice != null && product.sellPrice == null) {
+    product.sellPrice = sellPrice;
+    changed = true;
+  }
+  if (costPrice != null && product.costPrice == null) {
+    product.costPrice = costPrice;
+    changed = true;
+  }
+  if (unit && !product.unit) {
+    product.unit = unit;
+    changed = true;
+  }
+
+  if (changed && typeof product.save === 'function') {
+    await product.save(options.session ? { session: options.session } : undefined);
+  }
+
+  return product;
+}
+
 async function productsForShop(shopId) {
   const query = Product.find({ shopId });
   const sorted = typeof query.sort === 'function' ? query.sort({ name: 1 }) : query;
@@ -191,6 +214,13 @@ export async function resolveProduct({ shopId, rawName, unit }, options = {}) {
 }
 
 export async function createPricedProduct({ shopId, rawName, unit, sellPrice, costPrice }, options = {}) {
+  const products = await productsForResolution(shopId, options.session);
+  const existingProduct = findExistingProduct(products, rawName);
+
+  if (existingProduct) {
+    return applyProductDefaults(existingProduct, { sellPrice, costPrice, unit }, options);
+  }
+
   let product;
   try {
     [product] = await Product.create(
@@ -219,18 +249,7 @@ export async function createPricedProduct({ shopId, rawName, unit, sellPrice, co
       throw error;
     }
 
-    if (sellPrice != null && product.sellPrice == null) {
-      product.sellPrice = sellPrice;
-    }
-    if (costPrice != null && product.costPrice == null) {
-      product.costPrice = costPrice;
-    }
-    if (unit && !product.unit) {
-      product.unit = unit;
-    }
-    if (typeof product.save === 'function') {
-      await product.save(options.session ? { session: options.session } : undefined);
-    }
+    await applyProductDefaults(product, { sellPrice, costPrice, unit }, options);
   }
 
   return product;

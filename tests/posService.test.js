@@ -187,16 +187,17 @@ describe('posService', () => {
 
     expect(transactionCreateMock).not.toHaveBeenCalled();
     expect(setSessionStateMock).toHaveBeenCalledWith(session, 'clarifying', {
-      lastQuestion: expect.stringContaining('harga jual per galon untuk Aqua Galon'),
+      lastQuestion: expect.stringContaining('harga jual per satuan untuk Aqua Galon'),
       pendingPriceItem: expect.objectContaining({
         rawName: 'aqua',
         productId: 'product-1',
         priceNeeds: { costPrice: false, sellPrice: true },
+        priceStep: 'sellPrice',
       }),
     });
     expect(sendTextMock).toHaveBeenCalledWith(
       '+6281234567890',
-      expect.stringContaining('Balas: jual 150000'),
+      expect.stringContaining('contoh: 5000'),
     );
     expect(result.action).toBe('clarifying_missing_price');
   });
@@ -241,7 +242,7 @@ describe('posService', () => {
       { createIfMissing: false },
     );
     expect(setSessionStateMock).toHaveBeenCalledWith(session, 'clarifying', {
-      lastQuestion: expect.stringContaining('harga modal dan harga jual per dus'),
+      lastQuestion: expect.stringContaining('modal beli untuk 2 dus pocari 1 liter'),
       pendingPriceItem: {
         rawName: 'pocari 1 liter',
         name: 'pocari 1 liter',
@@ -250,22 +251,72 @@ describe('posService', () => {
         action: 'stock_in',
         productId: undefined,
         priceNeeds: { costPrice: true, sellPrice: true },
+        priceStep: 'costPrice',
       },
     });
     expect(sendTextMock).toHaveBeenCalledWith(
       '+6281234567890',
-      expect.stringContaining('Balas: modal 120000 jual 150000'),
+      expect.stringContaining('total modalnya'),
     );
     expect(result.action).toBe('clarifying_missing_price');
   });
 
-  it('creates the product only after a price-only reply and asks for Y/T', async () => {
+  it('asks for sell price after receiving the stock-in modal total', async () => {
+    const session = createSession({
+      state: 'clarifying',
+      context: {
+        pendingPriceItem: {
+          rawName: 'pocari 1 liter',
+          name: 'pocari 1 liter',
+          qty: 2,
+          unit: 'dus',
+          action: 'stock_in',
+          priceNeeds: { costPrice: true, sellPrice: true },
+          priceStep: 'costPrice',
+        },
+      },
+    });
+
+    const result = await handleMissingPriceReply({
+      shop: createShop(),
+      session,
+      message: {
+        from: '+6281234567890',
+        type: 'text',
+        text: '240000',
+        messageId: 'wamid-modal-reply',
+      },
+    });
+
+    expect(createPricedProductMock).not.toHaveBeenCalled();
+    expect(transactionCreateMock).not.toHaveBeenCalled();
+    expect(setSessionStateMock).toHaveBeenCalledWith(session, 'clarifying', {
+      lastQuestion: expect.stringContaining('harga jual per satuan untuk pocari 1 liter'),
+      pendingPriceItem: {
+        rawName: 'pocari 1 liter',
+        name: 'pocari 1 liter',
+        qty: 2,
+        unit: 'dus',
+        action: 'stock_in',
+        modalTotal: 240000,
+        priceNeeds: { costPrice: false, sellPrice: true },
+        priceStep: 'sellPrice',
+      },
+    });
+    expect(sendTextMock).toHaveBeenCalledWith(
+      '+6281234567890',
+      expect.stringContaining('harga jual per satuan'),
+    );
+    expect(result.action).toBe('clarifying_missing_sell_price');
+  });
+
+  it('creates the product only after the sell-price reply and asks for Y/T', async () => {
     const createdProduct = createProduct({
       _id: 'product-new',
       name: 'Pocari 1 Liter',
       unit: 'dus',
       costPrice: 120000,
-      sellPrice: 150000,
+      sellPrice: 5000,
     });
     createPricedProductMock.mockResolvedValue(createdProduct);
     transactionCreateMock.mockImplementation(async (payload) => ({
@@ -281,7 +332,9 @@ describe('posService', () => {
           qty: 2,
           unit: 'dus',
           action: 'stock_in',
-          priceNeeds: { costPrice: true, sellPrice: true },
+          modalTotal: 240000,
+          priceNeeds: { costPrice: false, sellPrice: true },
+          priceStep: 'sellPrice',
         },
       },
     });
@@ -292,7 +345,7 @@ describe('posService', () => {
       message: {
         from: '+6281234567890',
         type: 'text',
-        text: 'modal 120000 jual 150000',
+        text: '5000',
         messageId: 'wamid-price-reply',
       },
     });
@@ -302,7 +355,7 @@ describe('posService', () => {
       rawName: 'pocari 1 liter',
       unit: 'dus',
       costPrice: 120000,
-      sellPrice: 150000,
+      sellPrice: 5000,
     });
     expect(transactionCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -189,6 +189,7 @@ describe('productService dashboard catalog', () => {
 
   it('creates priced products from price clarification replies', async () => {
     const product = { _id: 'p4', name: 'Milo 500 Gram' };
+    productFindMock.mockResolvedValue([]);
     productCreateMock.mockResolvedValue([product]);
 
     await expect(
@@ -215,5 +216,34 @@ describe('productService dashboard catalog', () => {
       ],
       undefined,
     );
+  });
+
+  it('uses an existing product during priced creation instead of inserting a duplicate', async () => {
+    const product = {
+      _id: 'p5',
+      name: 'Pocari 1 Liter',
+      aliases: ['pocari 1 liter'],
+      unit: 'dus',
+      stock: 3,
+      sellPrice: undefined,
+      costPrice: undefined,
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+    productFindMock.mockResolvedValue([product]);
+
+    await expect(
+      createPricedProduct({
+        shopId: 'shop-1',
+        rawName: 'pocari 1 liter',
+        unit: 'dus',
+        costPrice: 120000,
+        sellPrice: 5000,
+      }),
+    ).resolves.toBe(product);
+
+    expect(productCreateMock).not.toHaveBeenCalled();
+    expect(product.costPrice).toBe(120000);
+    expect(product.sellPrice).toBe(5000);
+    expect(product.save).toHaveBeenCalledWith(undefined);
   });
 });

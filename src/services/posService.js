@@ -108,14 +108,21 @@ function hasPriceNeed(priceNeeds) {
 }
 
 function priceQuestionForPendingItem(item) {
-  const unitText = item.unit ? ` per ${item.unit}` : '';
+  if (item.priceStep === 'sellPrice' || (!item.priceNeeds.costPrice && item.priceNeeds.sellPrice)) {
+    return `Berapa harga jual per satuan untuk ${item.name}? Balas angka saja, contoh: 5000.`;
+  }
+
+  if (item.action === 'stock_in' && item.priceNeeds.costPrice) {
+    return `Berapa modal beli untuk ${formatQty(item)} ${item.name}? Balas total modalnya, contoh: 240000.`;
+  }
+
   if (item.priceNeeds.costPrice && item.priceNeeds.sellPrice) {
-    return `Berapa harga modal dan harga jual${unitText} untuk ${item.name}? Balas: modal 120000 jual 150000.`;
+    return `Berapa harga modal untuk ${item.name}? Balas angka saja, contoh: 120000.`;
   }
   if (item.priceNeeds.costPrice) {
-    return `Berapa harga modal${unitText} untuk ${item.name}? Balas: modal 120000.`;
+    return `Berapa harga modal untuk ${item.name}? Balas angka saja, contoh: 120000.`;
   }
-  return `Berapa harga jual${unitText} untuk ${item.name}? Balas: jual 150000.`;
+  return `Berapa harga jual per satuan untuk ${item.name}? Balas angka saja, contoh: 5000.`;
 }
 
 function parseRupiah(value) {
@@ -183,6 +190,8 @@ async function buildPendingItems(shopId, extractedItems, options = {}) {
           action: extractedItem.action,
           productId: product?._id,
           priceNeeds,
+          priceStep:
+            extractedItem.action === 'stock_in' && priceNeeds.costPrice ? 'costPrice' : 'sellPrice',
         },
       };
     }
@@ -293,7 +302,51 @@ export async function handleMissingPriceReply({ shop, session, message }) {
   }
 
   const prices = parsePriceReply(message.text);
-  const costPrice = pendingPriceItem.priceNeeds?.costPrice ? prices.costPrice : undefined;
+  if (pendingPriceItem.priceStep === 'costPrice') {
+    const modalTotal = prices.costPrice;
+
+    if (!modalTotal) {
+      const question = priceQuestionForPendingItem(pendingPriceItem);
+      await setSessionState(session, 'clarifying', {
+        lastQuestion: question,
+        pendingPriceItem,
+      });
+      await sendText(message.from, question);
+      return { action: 'clarifying_missing_price' };
+    }
+
+    if (pendingPriceItem.priceNeeds?.sellPrice) {
+      const nextPendingPriceItem = {
+        ...pendingPriceItem,
+        modalTotal,
+        priceStep: 'sellPrice',
+        priceNeeds: {
+          ...pendingPriceItem.priceNeeds,
+          costPrice: false,
+        },
+      };
+      const question = priceQuestionForPendingItem(nextPendingPriceItem);
+      await setSessionState(session, 'clarifying', {
+        lastQuestion: question,
+        pendingPriceItem: nextPendingPriceItem,
+      });
+      await sendText(message.from, question);
+      return { action: 'clarifying_missing_sell_price' };
+    }
+
+    pendingPriceItem.modalTotal = modalTotal;
+    pendingPriceItem.priceNeeds = {
+      ...pendingPriceItem.priceNeeds,
+      costPrice: false,
+    };
+  }
+
+  const costPrice =
+    pendingPriceItem.modalTotal != null && pendingPriceItem.qty > 0
+      ? Math.round(pendingPriceItem.modalTotal / pendingPriceItem.qty)
+      : pendingPriceItem.priceNeeds?.costPrice
+        ? prices.costPrice
+        : undefined;
   const sellPrice = pendingPriceItem.priceNeeds?.sellPrice ? prices.sellPrice : undefined;
   const stillMissing = {
     costPrice: pendingPriceItem.priceNeeds?.costPrice && !costPrice,
@@ -301,16 +354,15 @@ export async function handleMissingPriceReply({ shop, session, message }) {
   };
 
   if (hasPriceNeed(stillMissing)) {
-    const question = priceQuestionForPendingItem({
+    const nextPendingPriceItem = {
       ...pendingPriceItem,
       priceNeeds: stillMissing,
-    });
+      priceStep: stillMissing.costPrice ? 'costPrice' : 'sellPrice',
+    };
+    const question = priceQuestionForPendingItem(nextPendingPriceItem);
     await setSessionState(session, 'clarifying', {
       lastQuestion: question,
-      pendingPriceItem: {
-        ...pendingPriceItem,
-        priceNeeds: stillMissing,
-      },
+      pendingPriceItem: nextPendingPriceItem,
     });
     await sendText(message.from, question);
     return { action: 'clarifying_missing_price' };
@@ -350,7 +402,10 @@ export async function handleMissingPriceReply({ shop, session, message }) {
     unit: pendingPriceItem.unit ?? product.unit,
     action: pendingPriceItem.action,
     unitPrice,
-    lineTotal: lineTotal(pendingPriceItem.qty, unitPrice),
+    lineTotal:
+      pendingPriceItem.action === 'stock_in' && pendingPriceItem.modalTotal != null
+        ? pendingPriceItem.modalTotal
+        : lineTotal(pendingPriceItem.qty, unitPrice),
   };
   const transaction = await createPendingTransaction({
     shop,
