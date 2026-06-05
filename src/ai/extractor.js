@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { config } from '../config/index.js';
 import { Product } from '../models/Product.js';
 import { logger } from '../utils/logger.js';
+import { analyzeMessageEntities } from './nlClient.js';
 import { extractionResultSchema } from './schemas.js';
 
 const GEMINI_MAX_RETRIES = 2;
@@ -335,7 +336,7 @@ async function callGemini({ text, catalog, fallback = false }) {
   }
 }
 
-export async function extractEntities({ text, shop, preferGemini = true }) {
+async function extractBase({ text, shop, preferGemini }) {
   if (!preferGemini || !hasUsableGemini()) {
     return localExtract(text);
   }
@@ -365,6 +366,22 @@ export async function extractEntities({ text, shop, preferGemini = true }) {
     );
     return localExtract(text);
   }
+}
+
+// Supplement the structured extraction with GCP Natural Language API entities: fill in the
+// customer name (PERSON) when the parser didn't capture one. Best-effort and flag-gated.
+async function enrichWithNlEntities(result, text) {
+  if (!config.gcp.nlApiEnabled || result.customerRef) {
+    return result;
+  }
+
+  const { person } = await analyzeMessageEntities(text);
+  return person ? { ...result, customerRef: person } : result;
+}
+
+export async function extractEntities({ text, shop, preferGemini = true }) {
+  const result = await extractBase({ text, shop, preferGemini });
+  return enrichWithNlEntities(result, text);
 }
 
 export const extractorInternals = {
