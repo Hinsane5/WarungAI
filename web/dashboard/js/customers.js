@@ -1,10 +1,12 @@
-/* global URLSearchParams, document, localStorage, window */
+/* global FormData, URLSearchParams, document, localStorage, window */
 
 const params = new URLSearchParams(window.location.search);
 const tokenInput = document.querySelector('#dashboardToken');
 const segmentFilter = document.querySelector('#segmentFilter');
 const customersBody = document.querySelector('#customersBody');
 const customerCountLabel = document.querySelector('#customerCountLabel');
+const customerForm = document.querySelector('#customerForm');
+const formStatus = document.querySelector('#formStatus');
 const dashboardNavLink = document.querySelector('#dashboardNavLink');
 const chatNavLink = document.querySelector('#chatNavLink');
 const productsNavLink = document.querySelector('#productsNavLink');
@@ -64,13 +66,20 @@ function query() {
   return new URLSearchParams({ token: tokenInput.value.trim() });
 }
 
-async function api(path) {
-  const response = await fetch(`${path}?${query()}`);
+async function api(path, options) {
+  const response = await fetch(`${path}?${query()}`, options);
   const payload = await response.json();
   if (!response.ok) {
     throw new Error(payload.error || 'request_failed');
   }
   return payload;
+}
+
+function setStatus(text, state = '') {
+  if (formStatus) {
+    formStatus.textContent = text;
+    formStatus.className = `form-status ${state}`.trim();
+  }
 }
 
 function renderCustomers() {
@@ -145,6 +154,41 @@ async function loadCustomers() {
 
 tokenInput.addEventListener('change', loadCustomers);
 segmentFilter.addEventListener('change', renderCustomers);
+
+if (customerForm) {
+  customerForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!tokenInput.value.trim()) {
+      setStatus('Masukkan dashboard token dulu.', 'is-error');
+      return;
+    }
+    const data = new FormData(customerForm);
+    const payload = {
+      name: String(data.get('name') ?? '').trim(),
+      phone: String(data.get('phone') ?? '').trim(),
+      optInBroadcast: data.get('optInBroadcast') != null,
+    };
+    setStatus('Menyimpan...');
+    try {
+      await api('/api/dashboard/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      customerForm.reset();
+      customerForm.optInBroadcast.checked = true;
+      setStatus('Pelanggan tersimpan.', 'is-success');
+      await loadCustomers();
+    } catch (error) {
+      setStatus(
+        error.message === 'duplicate_customer'
+          ? 'Nomor WhatsApp itu sudah terdaftar.'
+          : 'Pelanggan belum bisa disimpan.',
+        'is-error',
+      );
+    }
+  });
+}
 
 syncLinks();
 loadCustomers();

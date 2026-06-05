@@ -17,6 +17,7 @@ const listDashboardProductsMock = vi.hoisted(() => vi.fn());
 const createDashboardProductMock = vi.hoisted(() => vi.fn());
 const updateDashboardProductPricesMock = vi.hoisted(() => vi.fn());
 const listDashboardCustomersMock = vi.hoisted(() => vi.fn());
+const createDashboardCustomerMock = vi.hoisted(() => vi.fn());
 const previewProactiveCrmMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/services/analyticsService.js', () => ({
@@ -29,6 +30,7 @@ vi.mock('../src/services/analyticsService.js', () => ({
   getCreditScores: getCreditScoresMock,
   buildMonthlyExcelExport: buildMonthlyExcelExportMock,
   listDashboardCustomers: listDashboardCustomersMock,
+  createDashboardCustomer: createDashboardCustomerMock,
 }));
 
 vi.mock('../src/services/bigqueryService.js', () => ({
@@ -447,6 +449,40 @@ describe('dashboard routes', () => {
       ]);
 
     expect(listDashboardCustomersMock).toHaveBeenCalledWith(shop);
+  });
+
+  it('creates a customer for the token shop', async () => {
+    createDashboardCustomerMock.mockResolvedValue({ ok: true, id: 'customer-9' });
+
+    await request(app)
+      .post('/api/dashboard/customers')
+      .query({ token: 'dash-test' })
+      .send({ name: 'Budi', phone: '+62812', optInBroadcast: true })
+      .expect(200, { ok: true, id: 'customer-9' });
+
+    expect(createDashboardCustomerMock).toHaveBeenCalledWith(shop, {
+      name: 'Budi',
+      phone: '+62812',
+      optInBroadcast: true,
+    });
+  });
+
+  it('returns 409 on a duplicate customer phone', async () => {
+    createDashboardCustomerMock.mockResolvedValue({ ok: false, reason: 'duplicate_customer' });
+
+    await request(app)
+      .post('/api/dashboard/customers')
+      .query({ token: 'dash-test' })
+      .send({ name: 'Budi', phone: '+62812' })
+      .expect(409, { ok: false, error: 'duplicate_customer' });
+  });
+
+  it('rejects a customer with no name', async () => {
+    await request(app)
+      .post('/api/dashboard/customers')
+      .query({ token: 'dash-test' })
+      .send({ phone: '+62812' })
+      .expect(400, { ok: false, error: 'invalid_customer' });
   });
 
   it('serves premium Excel export', async () => {

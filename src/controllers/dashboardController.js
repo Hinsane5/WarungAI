@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import {
   buildMonthlyExcelExport,
+  createDashboardCustomer,
   getCategoryMix,
   getCreditScores,
   getDashboardSummary,
@@ -57,6 +58,11 @@ const productCreateSchema = z.object({
   sellPrice: z.coerce.number().int().nonnegative().default(0),
   costPrice: z.coerce.number().int().nonnegative().default(0),
   reorderPoint: z.coerce.number().int().nonnegative().default(0),
+});
+const customerCreateSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  phone: z.string().trim().max(30).default(''),
+  optInBroadcast: z.coerce.boolean().default(true),
 });
 const productPriceUpdateSchema = z
   .object({
@@ -343,6 +349,27 @@ export async function dashboardCustomers(req, res) {
     const shop = await resolveDashboardShop(req, res);
     if (!shop) return null;
     return res.status(200).json(await listDashboardCustomers(shop));
+  } catch (error) {
+    return handleDashboardError(req, res, error);
+  }
+}
+
+export async function dashboardCreateCustomer(req, res) {
+  try {
+    const shop = await resolveDashboardShop(req, res);
+    if (!shop) return null;
+
+    const parsed = customerCreateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: 'invalid_customer' });
+    }
+
+    const result = await createDashboardCustomer(shop, parsed.data);
+    if (!result.ok && result.reason === 'duplicate_customer') {
+      return res.status(409).json({ ok: false, error: 'duplicate_customer' });
+    }
+
+    return res.status(200).json(result);
   } catch (error) {
     return handleDashboardError(req, res, error);
   }

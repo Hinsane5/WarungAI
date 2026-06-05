@@ -11,6 +11,7 @@ import {
   dashboardUpdateProduct,
   dashboardCrmPreview,
   dashboardCustomers,
+  dashboardCreateCustomer,
   dashboardCreditScores,
   dashboardExport,
   dashboardPredictiveRestock,
@@ -31,6 +32,7 @@ apiRouter.get('/api/dashboard/products', dashboardProducts);
 apiRouter.post('/api/dashboard/products', dashboardCreateProduct);
 apiRouter.patch('/api/dashboard/products/:id', dashboardUpdateProduct);
 apiRouter.get('/api/dashboard/customers', dashboardCustomers);
+apiRouter.post('/api/dashboard/customers', dashboardCreateCustomer);
 apiRouter.get('/api/dashboard/summary', dashboardSummary);
 apiRouter.get('/api/dashboard/sales-trend', dashboardSalesTrend);
 apiRouter.get('/api/dashboard/category-mix', dashboardCategoryMix);

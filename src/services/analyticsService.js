@@ -354,6 +354,34 @@ export async function listDashboardCustomers(shop) {
     .sort((a, b) => b.outstandingKasbon - a.outstandingKasbon || a.name.localeCompare(b.name));
 }
 
+// Manually add a customer from the Pelanggan page (joinedVia: 'manual'). Phone is unique
+// per shop (sparse index) — a duplicate phone returns a structured error.
+export async function createDashboardCustomer(shop, input) {
+  const name = String(input.name ?? '').trim();
+  const phone = String(input.phone ?? '').trim();
+
+  const doc = {
+    shopId: shop._id,
+    name,
+    aliases: name ? [name.toLowerCase()] : [],
+    loyalty: { points: 0, stamps: 0, joinedVia: 'manual' },
+    optInBroadcast: input.optInBroadcast ?? true,
+  };
+  if (phone) {
+    doc.phone = phone;
+  }
+
+  try {
+    const created = await Customer.create(doc);
+    return { ok: true, id: String(created._id) };
+  } catch (error) {
+    if (error?.code === 11000) {
+      return { ok: false, reason: 'duplicate_customer' };
+    }
+    throw error;
+  }
+}
+
 export async function buildMonthlyExcelExport(shop, { month, now = new Date() } = {}) {
   if (shop.tier !== 'premium') {
     return { ok: false, reason: 'premium_required' };

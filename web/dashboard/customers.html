@@ -97,6 +97,28 @@
             </table>
           </div>
         </article>
+
+        <article class="widget-card customer-form-card">
+          <div class="widget-card__header">
+            <h2 class="widget-card__title">Tambah Pelanggan</h2>
+          </div>
+          <form id="customerForm" class="customer-form">
+            <label>
+              <span>Nama</span>
+              <input name="name" required maxlength="120" placeholder="Budi" />
+            </label>
+            <label>
+              <span>WhatsApp (opsional)</span>
+              <input name="phone" maxlength="30" placeholder="+62812..." />
+            </label>
+            <label class="customer-form__check">
+              <input name="optInBroadcast" type="checkbox" checked />
+              <span>Boleh dikirim pengingat &amp; promo</span>
+            </label>
+            <button class="export-button" type="submit">Tambah Pelanggan</button>
+            <p id="formStatus" class="form-status" aria-live="polite"></p>
+          </form>
+        </article>
       </section>
     </main>
   </body>
