@@ -210,14 +210,27 @@ function localExtract(text) {
   return normalizeExtraction(result);
 }
 
-function hasUsableGeminiKey() {
+function hasUsableGemini() {
+  // Vertex AI mode authenticates via ADC (no API key needed). Otherwise we need a real
+  // AI Studio key (placeholders fall back to the deterministic local parser).
+  if (config.gcp.useVertex) {
+    return true;
+  }
   return (
     config.gcp.geminiApiKey && !['replace-me', 'test-gemini-key'].includes(config.gcp.geminiApiKey)
   );
 }
 
 function getGeminiClient() {
-  geminiClient ??= new GoogleGenAI({ apiKey: config.gcp.geminiApiKey });
+  if (!geminiClient) {
+    geminiClient = config.gcp.useVertex
+      ? new GoogleGenAI({
+          vertexai: true,
+          project: config.gcp.projectId,
+          location: config.gcp.location,
+        })
+      : new GoogleGenAI({ apiKey: config.gcp.geminiApiKey });
+  }
   return geminiClient;
 }
 
@@ -323,7 +336,7 @@ async function callGemini({ text, catalog, fallback = false }) {
 }
 
 export async function extractEntities({ text, shop, preferGemini = true }) {
-  if (!preferGemini || !hasUsableGeminiKey()) {
+  if (!preferGemini || !hasUsableGemini()) {
     return localExtract(text);
   }
 

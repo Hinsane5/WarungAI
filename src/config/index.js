@@ -33,6 +33,11 @@ const envSchema = z
     GCP_LOCATION: z.string().min(1).default('us-central1'),
     GEMINI_API_KEY: z.string().min(1),
     GEMINI_MODEL: z.string().min(1).default('gemini-2.5-flash'),
+    // When true, call Gemini through Vertex AI (ADC auth, GCP_PROJECT_ID + GCP_LOCATION)
+    // instead of the AI Studio API key.
+    GEMINI_USE_VERTEX: booleanFromEnv.default(false),
+    // GCP Natural Language API enrichment (customer-name + number entities).
+    NL_API_ENABLED: booleanFromEnv.default(false),
 
     FREE_TIER_DAILY_TXN_CAP: z.coerce.number().int().positive().default(50),
     KOIN_BOT_ENABLED: booleanFromEnv.default(true),
@@ -111,6 +116,8 @@ export const config = {
     location: parsedEnv.data.GCP_LOCATION,
     geminiApiKey: parsedEnv.data.GEMINI_API_KEY,
     geminiModel: parsedEnv.data.GEMINI_MODEL,
+    useVertex: parsedEnv.data.GEMINI_USE_VERTEX,
+    nlApiEnabled: parsedEnv.data.NL_API_ENABLED,
   },
   limits: {
     freeTierDailyTxnCap: parsedEnv.data.FREE_TIER_DAILY_TXN_CAP,
