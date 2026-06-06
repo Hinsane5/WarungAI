@@ -1,4 +1,4 @@
-/* global Chart, URLSearchParams, document, localStorage, window */
+/* global Chart, FormData, URLSearchParams, document, localStorage, window */
 
 const params = new URLSearchParams(window.location.search);
 const tokenInput = document.querySelector('#dashboardToken');
@@ -207,6 +207,75 @@ async function loadB2b() {
   );
 }
 
+const promoForm = document.querySelector('#promoForm');
+const promoStatus = document.querySelector('#promoStatus');
+
+function esc(value) {
+  return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+async function loadPromos() {
+  if (!document.querySelector('#promoList') || !tokenInput.value.trim()) {
+    return;
+  }
+  try {
+    const promos = await api('/api/dashboard/promos');
+    renderRows(
+      '#promoList',
+      promos.map(
+        (promo) => `<div class="list-row">
+        <div><p class="list-row__title">${esc(promo.brand)} — ${esc(promo.distributor)}</p>
+        <p class="list-row__meta">${esc(promo.offer)} · ${esc(promo.region)} · komisi ${promo.commissionPct}%</p></div>
+        <span class="badge ${promo.active ? 'badge--success' : 'badge--warning'}">${promo.active ? 'aktif' : 'nonaktif'}</span>
+      </div>`,
+      ),
+      'Belum ada promo. Pasang promo pertama lewat form di samping.',
+    );
+  } catch {
+    renderRows('#promoList', [], 'Promo belum tersedia.');
+  }
+}
+
+if (promoForm) {
+  promoForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!tokenInput.value.trim()) {
+      promoStatus.textContent = 'Masukkan token dulu.';
+      promoStatus.className = 'form-status is-error';
+      return;
+    }
+    const data = new FormData(promoForm);
+    const payload = {
+      brand: String(data.get('brand') ?? '').trim(),
+      distributor: String(data.get('distributor') ?? '').trim(),
+      offer: String(data.get('offer') ?? '').trim(),
+      region: String(data.get('region') ?? '').trim() || regionSelect.value,
+      commissionPct: Number(data.get('commissionPct') ?? 5),
+    };
+    promoStatus.textContent = 'Menyimpan...';
+    promoStatus.className = 'form-status';
+    try {
+      const query = new URLSearchParams({ token: tokenInput.value.trim() });
+      const response = await fetch(`/api/dashboard/promos?${query}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error('request_failed');
+      }
+      promoForm.reset();
+      promoForm.commissionPct.value = '5';
+      promoStatus.textContent = 'Promo terpasang.';
+      promoStatus.className = 'form-status is-success';
+      await loadPromos();
+    } catch {
+      promoStatus.textContent = 'Promo belum bisa disimpan.';
+      promoStatus.className = 'form-status is-error';
+    }
+  });
+}
+
 function updateLocation() {
   const query = new URLSearchParams({
     token: tokenInput.value.trim(),
@@ -219,6 +288,7 @@ tokenInput.addEventListener('change', updateLocation);
 regionSelect.addEventListener('change', updateLocation);
 
 syncLinks();
+loadPromos();
 loadB2b().catch(() => {
   setText('#activeWarungValue', 'Error');
   setText('#turnoverAvgValue', '-');

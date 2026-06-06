@@ -99,6 +99,31 @@
           </div>
           <div id="turnoverList" class="list"><div class="empty-state">Memuat turnover</div></div>
         </article>
+
+        <article class="widget-card widget-card--full">
+          <div class="widget-card__header">
+            <div>
+              <h2 class="widget-card__title">Targeted Promo (Sponsored)</h2>
+              <span class="muted"
+                >Distributor pasang promo — muncul saat warung "cek stok" di region ini.</span
+              >
+            </div>
+          </div>
+          <div class="promo-layout">
+            <div id="promoList" class="list"><div class="empty-state">Memuat promo</div></div>
+            <form id="promoForm" class="promo-form">
+              <label><span>Brand / Produk</span><input name="brand" required maxlength="120" placeholder="Indomie Goreng" /></label>
+              <label><span>Distributor</span><input name="distributor" required maxlength="120" placeholder="Agen Sinar Jaya" /></label>
+              <label><span>Penawaran</span><input name="offer" required maxlength="200" placeholder="beli 10 gratis 1" /></label>
+              <div class="promo-grid">
+                <label><span>Region</span><input name="region" maxlength="80" placeholder="Tangerang" /></label>
+                <label><span>Komisi %</span><input name="commissionPct" type="number" min="0" max="100" step="1" value="5" /></label>
+              </div>
+              <button class="export-button" type="submit">Pasang Promo</button>
+              <p id="promoStatus" class="form-status" aria-live="polite"></p>
+            </form>
+          </div>
+        </article>
       </section>
     </main>
   </body>

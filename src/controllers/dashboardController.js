@@ -26,6 +26,7 @@ import {
 } from '../services/productService.js';
 import { previewProactiveCrm } from '../services/crmPreviewService.js';
 import { buildLoyaltyQr } from '../services/loyaltyService.js';
+import { createPromo, listPromos } from '../services/promoService.js';
 
 const landingHtml = readFileSync(
   new URL('../../web/dashboard/landing.html', import.meta.url),
@@ -64,6 +65,14 @@ const customerCreateSchema = z.object({
   name: z.string().trim().min(1).max(120),
   phone: z.string().trim().max(30).default(''),
   optInBroadcast: z.coerce.boolean().default(true),
+});
+const promoCreateSchema = z.object({
+  brand: z.string().trim().min(1).max(120),
+  distributor: z.string().trim().min(1).max(120),
+  offer: z.string().trim().min(1).max(200),
+  region: z.string().trim().max(80).default('all'),
+  commissionPct: z.coerce.number().min(0).max(100).default(5),
+  activeUntil: z.string().trim().optional(),
 });
 const productPriceUpdateSchema = z
   .object({
@@ -187,6 +196,32 @@ export async function dashboardLoyaltyQr(req, res) {
     const shop = await resolveDashboardShop(req, res);
     if (!shop) return null;
     return res.status(200).json(await buildLoyaltyQr(shop));
+  } catch (error) {
+    return handleDashboardError(req, res, error);
+  }
+}
+
+export async function dashboardPromos(req, res) {
+  try {
+    const shop = await resolveDashboardShop(req, res);
+    if (!shop) return null;
+    return res.status(200).json(await listPromos());
+  } catch (error) {
+    return handleDashboardError(req, res, error);
+  }
+}
+
+export async function dashboardCreatePromo(req, res) {
+  try {
+    const shop = await resolveDashboardShop(req, res);
+    if (!shop) return null;
+
+    const parsed = promoCreateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: 'invalid_promo' });
+    }
+
+    return res.status(200).json(await createPromo(parsed.data));
   } catch (error) {
     return handleDashboardError(req, res, error);
   }

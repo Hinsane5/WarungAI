@@ -19,6 +19,8 @@ const updateDashboardProductPricesMock = vi.hoisted(() => vi.fn());
 const listDashboardCustomersMock = vi.hoisted(() => vi.fn());
 const createDashboardCustomerMock = vi.hoisted(() => vi.fn());
 const previewProactiveCrmMock = vi.hoisted(() => vi.fn());
+const listPromosMock = vi.hoisted(() => vi.fn());
+const createPromoMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/services/analyticsService.js', () => ({
   getShopByDashboardToken: getShopByDashboardTokenMock,
@@ -48,6 +50,14 @@ vi.mock('../src/services/productService.js', () => ({
 
 vi.mock('../src/services/crmPreviewService.js', () => ({
   previewProactiveCrm: previewProactiveCrmMock,
+}));
+
+vi.mock('../src/services/promoService.js', () => ({
+  listPromos: listPromosMock,
+  createPromo: createPromoMock,
+  findActivePromoForProduct: vi.fn(),
+  recordPromoOrder: vi.fn(),
+  formatPromoLine: vi.fn(),
 }));
 
 const { app } = await import('../src/app.js');
@@ -493,6 +503,38 @@ describe('dashboard routes', () => {
 
     expect(res.body.qr).toMatch(/^data:image\/png;base64,/);
     expect(res.body.url).toContain('/loyalty/');
+  });
+
+  it('lists targeted promos', async () => {
+    const promos = [
+      { id: 'promo-1', brand: 'Indomie', distributor: 'Agen Sinar Jaya', offer: 'beli 10 gratis 1', region: 'Tangerang', commissionPct: 5, activeUntil: null, active: true },
+    ];
+    listPromosMock.mockResolvedValue(promos);
+
+    await request(app)
+      .get('/api/dashboard/promos')
+      .query({ token: 'dash-test' })
+      .expect(200, promos);
+  });
+
+  it('creates a targeted promo', async () => {
+    createPromoMock.mockResolvedValue({ ok: true, id: 'promo-9' });
+
+    await request(app)
+      .post('/api/dashboard/promos')
+      .query({ token: 'dash-test' })
+      .send({ brand: 'Indomie', distributor: 'Agen Sinar Jaya', offer: 'beli 10 gratis 1' })
+      .expect(200, { ok: true, id: 'promo-9' });
+
+    expect(createPromoMock).toHaveBeenCalled();
+  });
+
+  it('rejects a promo missing required fields', async () => {
+    await request(app)
+      .post('/api/dashboard/promos')
+      .query({ token: 'dash-test' })
+      .send({ brand: 'Indomie' })
+      .expect(400, { ok: false, error: 'invalid_promo' });
   });
 
   it('serves premium Excel export', async () => {

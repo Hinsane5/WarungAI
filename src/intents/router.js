@@ -19,6 +19,11 @@ import {
 } from '../services/priceCommandService.js';
 import { handleScheduleCommand, parseScheduleCommand } from '../services/scheduleService.js';
 import { findOrCreateByOwnerPhone } from '../services/shopService.js';
+import {
+  handlePromoOrderReply,
+  handleStockCheck,
+  parseStockCheckCommand,
+} from '../services/stockCommandService.js';
 import { getOrCreateSession } from '../services/sessionService.js';
 import { logger } from '../utils/logger.js';
 
@@ -36,6 +41,7 @@ const HELP_MESSAGE = [
   '- Catat penjualan: "laku 1 galon aqua 20000"',
   '- Catat kasbon: "kasbon budi 2 rokok 50000"',
   '- Tagih kasbon: "tagih budi"',
+  '- Cek stok + promo distributor: "cek stok indomie"',
   '- Cek/ubah jadwal evaluasi: "jadwal evaluasi" atau "jadwal evaluasi 19.00"',
   'Setiap transaksi akan minta konfirmasi Y/T sebelum disimpan.',
 ].join('\n');
@@ -135,6 +141,17 @@ export async function routeInboundMessage(message) {
 
   if (session.state === 'awaiting_kasbon_reminder_approval') {
     return approveKasbonReminder({ shop, session, message });
+  }
+
+  if (session.state === 'awaiting_promo_order') {
+    const handled = await handlePromoOrderReply({ shop, session, message });
+    if (handled) {
+      return handled;
+    }
+  }
+
+  if (parseStockCheckCommand(message.text)) {
+    return handleStockCheck({ shop, session, message });
   }
 
   if (parseScheduleCommand(message.text)) {
