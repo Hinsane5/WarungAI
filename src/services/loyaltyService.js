@@ -1,3 +1,5 @@
+import QRCode from 'qrcode';
+
 import { config } from '../config/index.js';
 import { sendText } from '../messaging/whatsapp.js';
 import { Customer } from '../models/Customer.js';
@@ -89,6 +91,17 @@ async function linkRecentTransaction({ shopId, customerId, now = new Date() }) {
 
 export function buildLoyaltyQrUrl(shop) {
   return loyaltyUrl(shop.loyaltyQrSlug);
+}
+
+// Render the loyalty URL as a scannable QR (PNG data URL) so the owner can print/display it.
+export async function buildLoyaltyQr(shop) {
+  const url = buildLoyaltyQrUrl(shop);
+  const qr = await QRCode.toDataURL(url, {
+    width: 512,
+    margin: 2,
+    color: { dark: '#14443a', light: '#ffffff' },
+  });
+  return { url, qr };
 }
 
 export async function registerLoyaltyCustomer({ slug, phone, name, now = new Date() }) {

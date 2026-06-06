@@ -10,6 +10,7 @@ import {
   dashboardCreateProduct,
   dashboardUpdateProduct,
   dashboardCrmPreview,
+  dashboardLoyaltyQr,
   dashboardCustomers,
   dashboardCreateCustomer,
   dashboardCreditScores,
@@ -40,4 +41,5 @@ apiRouter.get('/api/dashboard/top-items', dashboardTopItems);
 apiRouter.get('/api/dashboard/predictive-restock', dashboardPredictiveRestock);
 apiRouter.get('/api/dashboard/credit-scores', dashboardCreditScores);
 apiRouter.get('/api/dashboard/crm/preview', dashboardCrmPreview);
+apiRouter.get('/api/dashboard/loyalty-qr', dashboardLoyaltyQr);
 apiRouter.get('/api/dashboard/export', dashboardExport);

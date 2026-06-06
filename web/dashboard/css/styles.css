@@ -463,3 +463,42 @@ select {
 #crmPreviewResult {
   gap: 12px;
 }
+
+/* Loyalty QR widget */
+.qr-box {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.qr-img {
+  width: 180px;
+  height: 180px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--wa-border);
+  background: #fff;
+}
+
+.qr-meta {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.qr-link {
+  color: var(--wa-green-700);
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.qr-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.qr-actions .export-button {
+  text-decoration: none;
+  cursor: pointer;
+}

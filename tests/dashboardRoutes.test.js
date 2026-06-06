@@ -485,6 +485,16 @@ describe('dashboard routes', () => {
       .expect(400, { ok: false, error: 'invalid_customer' });
   });
 
+  it('returns a scannable loyalty QR for the token shop', async () => {
+    const res = await request(app)
+      .get('/api/dashboard/loyalty-qr')
+      .query({ token: 'dash-test' })
+      .expect(200);
+
+    expect(res.body.qr).toMatch(/^data:image\/png;base64,/);
+    expect(res.body.url).toContain('/loyalty/');
+  });
+
   it('serves premium Excel export', async () => {
     const response = await request(app)
       .get('/api/dashboard/export')

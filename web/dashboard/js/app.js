@@ -297,6 +297,41 @@ if (crmPreviewButton) {
   crmPreviewButton.addEventListener('click', loadCrmPreview);
 }
 
+const loyaltyQrImg = document.querySelector('#loyaltyQrImg');
+const loyaltyQrLink = document.querySelector('#loyaltyQrLink');
+const loyaltyQrDownload = document.querySelector('#loyaltyQrDownload');
+const loyaltyQrPrint = document.querySelector('#loyaltyQrPrint');
+
+async function loadLoyaltyQr() {
+  if (!loyaltyQrImg || !tokenInput.value.trim()) {
+    return;
+  }
+  try {
+    const data = await api('/api/dashboard/loyalty-qr');
+    loyaltyQrImg.src = data.qr;
+    loyaltyQrDownload.href = data.qr;
+    loyaltyQrLink.href = data.url;
+    loyaltyQrLink.textContent = data.url;
+  } catch {
+    loyaltyQrLink.textContent = 'QR belum tersedia';
+  }
+}
+
+if (loyaltyQrPrint) {
+  loyaltyQrPrint.addEventListener('click', () => {
+    const src = loyaltyQrImg?.src;
+    if (!src) {
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(
+      `<title>QR Loyalty WarungAI</title><img src="${src}" style="width:340px" ` +
+        `onload="window.print();window.close()" />`,
+    );
+    printWindow.document.close();
+  });
+}
+
 async function loadDashboard() {
   if (!tokenInput.value.trim()) {
     document.querySelector('#shopName').textContent = 'Masukkan dashboard token';
@@ -309,6 +344,7 @@ async function loadDashboard() {
     loadCategoryAndTopItems(),
     loadRestock(),
     loadCreditScores(),
+    loadLoyaltyQr(),
   ]);
 }
 
