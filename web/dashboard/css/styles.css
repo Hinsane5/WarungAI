@@ -392,9 +392,40 @@ select {
     padding-right: 16px;
   }
 
-  .nav-pills,
-  .topbar__meta {
+  /* Keep the navbar usable on mobile: brand + role-switch on top, the tabs become a
+     horizontally scrollable row below (instead of disappearing). */
+  .topbar__inner {
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .topbar nav {
+    order: 3;
+    width: 100%;
+  }
+
+  .nav-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .nav-pills::-webkit-scrollbar {
     display: none;
+  }
+
+  .nav-pills a {
+    white-space: nowrap;
+  }
+
+  .nav-pills__demo {
+    margin-left: 8px;
+    padding-left: 10px;
   }
 
   .hero-row,
