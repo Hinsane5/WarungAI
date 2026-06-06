@@ -8,6 +8,7 @@ import {
   parseReminderCommand,
 } from '../services/kasbonService.js';
 import {
+  cancelPendingFlow,
   confirmPendingTransaction,
   handleMissingPriceReply,
   handleTextPos,
@@ -24,7 +25,7 @@ import {
   handleStockCheck,
   parseStockCheckCommand,
 } from '../services/stockCommandService.js';
-import { getOrCreateSession } from '../services/sessionService.js';
+import { describePendingAction, getOrCreateSession } from '../services/sessionService.js';
 import { logger } from '../utils/logger.js';
 
 const WELCOME_MESSAGE = [
@@ -48,6 +49,31 @@ const HELP_MESSAGE = [
 
 function isHelpCommand(text) {
   return /^\s*\/?(?:bantuan|help)\s*$/iu.test(text);
+}
+
+const PENDING_STATES = new Set([
+  'awaiting_confirmation',
+  'awaiting_kasbon_reminder_approval',
+  'awaiting_promo_order',
+  'clarifying',
+]);
+
+function isCancelCommand(text) {
+  return /^\s*batal\s*$/iu.test(text);
+}
+
+// A clearly-distinct command the owner could send mid-flow that should interrupt (cancel)
+// the pending flow rather than be mistaken for an answer to it. Deliberately excludes bare
+// POS verbs and short replies (numbers, Y/T, ya, jual/modal) that ARE valid continuations.
+function isInterruptingCommand(text) {
+  return Boolean(
+    isHelpCommand(text) ||
+      parseScheduleCommand(text) ||
+      parsePriceUpdateCommand(text) ||
+      parseStockCheckCommand(text) ||
+      parseReminderCommand(text) ||
+      /^\s*kasbon\b/iu.test(text),
+  );
 }
 
 async function handleAudioMessage({ shop, session, message }) {
@@ -132,6 +158,27 @@ export async function routeInboundMessage(message) {
   if (message.type !== 'text' || !message.text) {
     await sendText(message.from, 'Untuk saat ini, kirim pesan teks dulu ya.');
     return { handled: true, action: 'unsupported_message' };
+  }
+
+  // Interruptible flows: let the owner escape a half-finished flow instead of being stuck
+  // re-answering the same question. "batal" cancels; a clearly-different command cancels the
+  // old flow and proceeds to the new one.
+  if (PENDING_STATES.has(session.state)) {
+    if (isCancelCommand(message.text)) {
+      const label = describePendingAction(session);
+      await cancelPendingFlow({ session });
+      await sendText(message.from, `Oke, aksi "${label}" dibatalkan. Datanya tidak berubah.`);
+      return { handled: true, action: 'pending_cancelled' };
+    }
+    if (isInterruptingCommand(message.text)) {
+      const label = describePendingAction(session);
+      await cancelPendingFlow({ session });
+      await sendText(
+        message.from,
+        `Aksi "${label}" sebelumnya dibatalkan — lanjut ke perintah baru ya.`,
+      );
+      // fall through: the session is idle now, so the new command is handled below.
+    }
   }
 
   if (isHelpCommand(message.text)) {

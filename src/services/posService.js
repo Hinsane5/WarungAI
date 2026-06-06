@@ -85,6 +85,32 @@ function plainContext(context) {
   return context?.toObject?.() ?? context ?? {};
 }
 
+// Abort whatever multi-step flow the session is in: cancel a still-pending transaction (if
+// any) and reset to idle. Used when the owner interrupts with a new command or types "batal".
+export async function cancelPendingFlow({ session }) {
+  const ctx = plainContext(session.context);
+
+  if (ctx.pendingTransactionId) {
+    const transaction = await Transaction.findOne({
+      _id: ctx.pendingTransactionId,
+      status: 'pending',
+    });
+    if (transaction) {
+      transaction.status = 'cancelled';
+      await transaction.save();
+    }
+  }
+
+  await setSessionState(session, 'idle', {
+    pendingTransactionId: undefined,
+    failureCount: 0,
+    lastQuestion: undefined,
+    pendingPriceItem: undefined,
+    pendingPriceUpdate: undefined,
+    pendingPromoOrder: undefined,
+  });
+}
+
 function needsPriceForItem(extractedItem, product) {
   if (extractedItem.unitPrice != null) {
     return { costPrice: false, sellPrice: false };
@@ -126,7 +152,7 @@ function priceQuestionBase(item) {
 }
 
 function priceQuestionForPendingItem(item) {
-  return `${priceQuestionBase(item)}\n(Belum tersimpan — balas dulu biar masuk buku.)`;
+  return `${priceQuestionBase(item)}\n(Belum tersimpan — balas angkanya, atau ketik "batal".)`;
 }
 
 function parseRupiah(value) {

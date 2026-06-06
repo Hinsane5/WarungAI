@@ -4,6 +4,8 @@ const findOrCreateByOwnerPhoneMock = vi.hoisted(() => vi.fn());
 const getOrCreateSessionMock = vi.hoisted(() => vi.fn());
 const handleTextPosMock = vi.hoisted(() => vi.fn());
 const confirmPendingTransactionMock = vi.hoisted(() => vi.fn());
+const cancelPendingFlowMock = vi.hoisted(() => vi.fn());
+const describePendingActionMock = vi.hoisted(() => vi.fn());
 const handleMissingPriceReplyMock = vi.hoisted(() => vi.fn());
 const handlePendingPriceUpdateReplyMock = vi.hoisted(() => vi.fn());
 const handlePriceUpdateCommandMock = vi.hoisted(() => vi.fn());
@@ -22,12 +24,14 @@ vi.mock('../src/services/shopService.js', () => ({
 
 vi.mock('../src/services/sessionService.js', () => ({
   getOrCreateSession: getOrCreateSessionMock,
+  describePendingAction: describePendingActionMock,
 }));
 
 vi.mock('../src/services/posService.js', () => ({
   handleTextPos: handleTextPosMock,
   handleMissingPriceReply: handleMissingPriceReplyMock,
   confirmPendingTransaction: confirmPendingTransactionMock,
+  cancelPendingFlow: cancelPendingFlowMock,
 }));
 
 vi.mock('../src/services/priceCommandService.js', () => ({
@@ -80,6 +84,12 @@ describe('routeInboundMessage', () => {
       confidence: 0.82,
     });
     sendTextMock.mockResolvedValue({ messages: [{ id: 'sent-1' }] });
+    describePendingActionMock.mockReturnValue('ubah harga');
+    // simulate cancelPendingFlow resetting the session to idle
+    cancelPendingFlowMock.mockImplementation(async ({ session }) => {
+      session.state = 'idle';
+      session.context = {};
+    });
   });
 
   afterEach(() => {
@@ -190,6 +200,60 @@ describe('routeInboundMessage', () => {
       message,
     });
     expect(handleTextPosMock).not.toHaveBeenCalled();
+  });
+
+  it('cancels a pending flow when the owner types "batal"', async () => {
+    const session = {
+      _id: 'session-1',
+      state: 'clarifying',
+      context: { pendingPriceUpdate: { productId: 'p1' } },
+    };
+    getOrCreateSessionMock.mockResolvedValue(session);
+
+    const result = await routeInboundMessage({
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: 'batal',
+    });
+
+    expect(cancelPendingFlowMock).toHaveBeenCalledWith({ session });
+    expect(handlePendingPriceUpdateReplyMock).not.toHaveBeenCalled();
+    expect(sendTextMock).toHaveBeenCalledWith(
+      '+6281234567890',
+      expect.stringContaining('dibatalkan'),
+    );
+    expect(result).toEqual({ handled: true, action: 'pending_cancelled' });
+  });
+
+  it('lets a new command interrupt a pending flow', async () => {
+    const session = {
+      _id: 'session-1',
+      state: 'clarifying',
+      context: { pendingPriceUpdate: { productId: 'p1' } },
+    };
+    getOrCreateSessionMock.mockResolvedValue(session);
+    parsePriceUpdateCommandMock.mockReturnValue({
+      priceType: 'sellPrice',
+      rawName: 'aqua',
+      price: null,
+    });
+    const message = {
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: 'ubah harga jual aqua',
+    };
+
+    await routeInboundMessage(message);
+
+    expect(cancelPendingFlowMock).toHaveBeenCalledWith({ session });
+    expect(handlePendingPriceUpdateReplyMock).not.toHaveBeenCalled();
+    expect(handlePriceUpdateCommandMock).toHaveBeenCalledWith({
+      shop: { _id: 'shop-1' },
+      session,
+      message,
+    });
   });
 
   it('routes pending catalog price update replies before normal POS handling', async () => {
