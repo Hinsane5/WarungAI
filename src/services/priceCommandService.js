@@ -59,11 +59,11 @@ function formatMoney(value) {
 }
 
 function questionForUpdate(productName, priceType) {
-  return `${PRICE_KIND_LABELS[priceType]} baru untuk ${productName} berapa? Balas angka saja, contoh: 15000.`;
+  return `${PRICE_KIND_LABELS[priceType]} baru untuk ${productName} berapa? Balas angka saja, contoh: 15000.\n(Belum tersimpan — balas dulu ya.)`;
 }
 
 function questionForKind(productName) {
-  return `Mau ubah harga jual atau harga modal untuk ${productName}? Balas "jual" atau "modal".`;
+  return `Mau ubah harga jual atau harga modal untuk ${productName}? Balas "jual" atau "modal".\n(Belum tersimpan.)`;
 }
 
 async function sendProductNotFound(to, rawName) {

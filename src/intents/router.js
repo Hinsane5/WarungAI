@@ -113,6 +113,18 @@ export async function routeInboundMessage(message) {
     return { handled: true, action: 'onboarded', shopId: shop._id };
   }
 
+  // An earlier flow was abandoned and auto-cancelled — tell the owner it didn't complete,
+  // then handle this message fresh (the session is already reset to idle).
+  if (session.expiredNotice) {
+    const notice = session.expiredNotice;
+    session.expiredNotice = undefined;
+    await session.save();
+    await sendText(
+      message.from,
+      `Catatan: aksi "${notice}" sebelumnya belum selesai dan sudah dibatalkan karena tidak ada balasan. Datanya tidak berubah — mulai lagi kalau perlu ya.`,
+    );
+  }
+
   if (message.type === 'audio') {
     return handleAudioMessage({ shop, session, message });
   }

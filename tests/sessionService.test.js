@@ -75,11 +75,11 @@ describe('sessionService', () => {
     expect(result).toBe(createdSession);
   });
 
-  it('refreshes and saves an existing active session', async () => {
+  it('refreshes and saves a recently active pending session', async () => {
     const session = createSession({
       shopId: 'shop-old',
       state: 'awaiting_confirmation',
-      lastActivityAt: new Date('2026-05-30T09:30:00.000Z'),
+      lastActivityAt: new Date('2026-05-30T09:55:00.000Z'), // 5 min ago, within pending TTL
     });
     sessionFindOneMock.mockResolvedValue(session);
 
@@ -92,6 +92,21 @@ describe('sessionService', () => {
     expect(session.shopId).toBe('shop-new');
     expect(session.state).toBe('awaiting_confirmation');
     expect(session.lastActivityAt).toEqual(new Date('2026-05-30T10:00:00.000Z'));
+    expect(session.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('expires an abandoned mid-flow session and records the notice', async () => {
+    const session = createSession({
+      state: 'clarifying',
+      context: { pendingPriceUpdate: { productName: 'Aqua Galon 19L' } },
+      lastActivityAt: new Date('2026-05-30T09:45:00.000Z'), // 15 min ago, past pending TTL
+    });
+    sessionFindOneMock.mockResolvedValue(session);
+
+    await getOrCreateSession({ shopId: 'shop-1', ownerPhone: '+6281234567890' });
+
+    expect(session.state).toBe('idle');
+    expect(session.expiredNotice).toBe('ubah harga Aqua Galon 19L');
     expect(session.save).toHaveBeenCalledTimes(1);
   });
 

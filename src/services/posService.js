@@ -107,7 +107,7 @@ function hasPriceNeed(priceNeeds) {
   return priceNeeds.costPrice || priceNeeds.sellPrice;
 }
 
-function priceQuestionForPendingItem(item) {
+function priceQuestionBase(item) {
   if (item.priceStep === 'sellPrice' || (!item.priceNeeds.costPrice && item.priceNeeds.sellPrice)) {
     return `Berapa harga jual per satuan untuk ${item.name}? Balas angka saja, contoh: 5000.`;
   }
@@ -123,6 +123,10 @@ function priceQuestionForPendingItem(item) {
     return `Berapa harga modal untuk ${item.name}? Balas angka saja, contoh: 120000.`;
   }
   return `Berapa harga jual per satuan untuk ${item.name}? Balas angka saja, contoh: 5000.`;
+}
+
+function priceQuestionForPendingItem(item) {
+  return `${priceQuestionBase(item)}\n(Belum tersimpan — balas dulu biar masuk buku.)`;
 }
 
 function parseRupiah(value) {

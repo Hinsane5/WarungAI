@@ -25,6 +25,9 @@ const sessionSchema = new mongoose.Schema(
       pendingPriceUpdate: { type: mongoose.Schema.Types.Mixed },
       pendingPromoOrder: { type: mongoose.Schema.Types.Mixed },
     },
+    // Set when an abandoned in-flight flow is auto-cancelled; the next inbound message
+    // tells the owner it didn't complete, then clears this.
+    expiredNotice: { type: String },
     lastActivityAt: { type: Date, default: Date.now, index: true },
   },
   { timestamps: true },

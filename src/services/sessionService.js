@@ -11,6 +11,49 @@ export function isSessionStale(session, now = new Date()) {
   return now.getTime() - session.lastActivityAt.getTime() > ttlMs;
 }
 
+// A multi-step flow (state !== idle) that hasn't been answered within the (shorter) pending
+// TTL — the owner walked away mid-action.
+export function isSessionPendingStale(session, now = new Date()) {
+  if (!session?.lastActivityAt || session.state === 'idle') {
+    return false;
+  }
+  const ttlMs = config.limits.pendingTtlMinutes * 60 * 1000;
+  return now.getTime() - session.lastActivityAt.getTime() > ttlMs;
+}
+
+function plainContext(context) {
+  return context?.toObject?.() ?? context ?? {};
+}
+
+// Human label for the action the owner abandoned (used in the "it didn't complete" notice).
+export function describePendingAction(session) {
+  const ctx = plainContext(session.context);
+  switch (session.state) {
+    case 'awaiting_confirmation':
+      return 'konfirmasi transaksi';
+    case 'awaiting_kasbon_reminder_approval':
+      return 'kirim pengingat kasbon';
+    case 'awaiting_promo_order':
+      return ctx.pendingPromoOrder?.brand
+        ? `pesan promo ${ctx.pendingPromoOrder.brand}`
+        : 'pesan promo';
+    case 'clarifying':
+      if (ctx.pendingPriceUpdate) {
+        return ctx.pendingPriceUpdate.productName
+          ? `ubah harga ${ctx.pendingPriceUpdate.productName}`
+          : 'ubah harga';
+      }
+      if (ctx.pendingPriceItem) {
+        return ctx.pendingPriceItem.rawName
+          ? `catat "${ctx.pendingPriceItem.rawName}"`
+          : 'catat transaksi';
+      }
+      return 'lanjutkan transaksi';
+    default:
+      return 'lanjutkan transaksi';
+  }
+}
+
 function idleContext() {
   return {
     pendingTransactionId: undefined,
@@ -18,11 +61,17 @@ function idleContext() {
     lastQuestion: undefined,
     pendingPriceItem: undefined,
     pendingPriceUpdate: undefined,
+    pendingPromoOrder: undefined,
   };
 }
 
-function plainContext(context) {
-  return context?.toObject?.() ?? context ?? {};
+// Cancel an abandoned flow in-memory: record what it was, reset to idle, clear context.
+// Caller persists (save). The notice is delivered on the owner's next message.
+export function expireSession(session) {
+  session.expiredNotice = describePendingAction(session);
+  session.state = 'idle';
+  session.context = idleContext();
+  return session;
 }
 
 export async function getOrCreateSession({ shopId, ownerPhone }) {
@@ -41,7 +90,10 @@ export async function getOrCreateSession({ shopId, ownerPhone }) {
     return session;
   }
 
-  if (isSessionStale(session)) {
+  if (isSessionPendingStale(session)) {
+    // Abandoned mid-flow: cancel it and remember to tell the owner it didn't complete.
+    expireSession(session);
+  } else if (isSessionStale(session)) {
     session.state = 'idle';
     session.context = idleContext();
   }

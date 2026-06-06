@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 import { runCreditScoreRefresh } from './creditScoreRefresh.js';
 import { runCrmNotifier } from './crmNotifier.js';
 import { runPredictiveRestock } from './predictiveRestock.js';
+import { runSessionSweep } from './sessionSweep.js';
 
 // Global fallback time for shops that haven't set their own (derived from CRM_NIGHTLY_CRON
 // "m h * * *"). Bu Sri can override it per-shop via WhatsApp.
@@ -84,6 +85,7 @@ export async function runDueEvaluations({ now = new Date() } = {}) {
 // One scheduler tick (called every minute in production): run any due per-shop
 // evaluations, plus the global BigQuery export once per day at 02:00 local time.
 export async function runScheduledTick({ now = new Date() } = {}) {
+  const sweep = await runSessionSweep({ now });
   const due = await runDueEvaluations({ now });
 
   let bigquery = { skipped: true };
@@ -97,5 +99,5 @@ export async function runScheduledTick({ now = new Date() } = {}) {
     }
   }
 
-  return { due, bigquery };
+  return { sweep, due, bigquery };
 }
