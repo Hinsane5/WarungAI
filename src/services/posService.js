@@ -105,6 +105,7 @@ export async function cancelPendingFlow({ session }) {
     pendingTransactionId: undefined,
     failureCount: 0,
     lastQuestion: undefined,
+    clarifyingText: undefined,
     pendingPriceItem: undefined,
     pendingPriceUpdate: undefined,
     pendingPromoOrder: undefined,
@@ -293,8 +294,11 @@ export async function handleTextPos({ shop, session, message }) {
     extraction.needsClarification ||
     extraction.items.length === 0
   ) {
+    // Keep the original message so the owner's answer to this question is interpreted
+    // together with it (handleClarifyingReply), not re-parsed in isolation and lost.
     await setSessionState(session, 'clarifying', {
       lastQuestion: extraction.clarificationQuestion,
+      clarifyingText: message.text,
     });
     await sendText(message.from, extraction.clarificationQuestion);
     return { action: 'clarifying' };
@@ -321,6 +325,31 @@ export async function handleTextPos({ shop, session, message }) {
   });
 
   return { action: 'pending_confirmation', transaction };
+}
+
+// The owner is answering a free-form AI clarification (e.g. "Satuan untuk telur dan
+// harganya berapa?"). Merge their answer with the original message kept in context and
+// re-run extraction on the combined text, so the answer has context instead of being
+// parsed alone (which would lose the item and ask "transaksi apa ini?" again).
+export async function handleClarifyingReply({ shop, session, message }) {
+  const priorText = plainContext(session.context).clarifyingText;
+
+  if (!priorText) {
+    await setSessionState(session, 'idle', { clarifyingText: undefined });
+    return handleTextPos({ shop, session, message });
+  }
+
+  const combinedText = `${priorText} ${message.text ?? ''}`.trim();
+  await setSessionState(session, 'idle', {
+    clarifyingText: undefined,
+    lastQuestion: undefined,
+  });
+
+  return handleTextPos({
+    shop,
+    session,
+    message: { ...message, text: combinedText },
+  });
 }
 
 export async function handleMissingPriceReply({ shop, session, message }) {

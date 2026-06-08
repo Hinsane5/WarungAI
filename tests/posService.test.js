@@ -50,9 +50,12 @@ vi.mock('../src/services/sessionService.js', () => ({
   setSessionState: setSessionStateMock,
 }));
 
-const { confirmPendingTransaction, handleMissingPriceReply, handleTextPos } = await import(
-  '../src/services/posService.js'
-);
+const {
+  confirmPendingTransaction,
+  handleClarifyingReply,
+  handleMissingPriceReply,
+  handleTextPos,
+} = await import('../src/services/posService.js');
 
 function createProduct(overrides = {}) {
   const product = {
@@ -506,5 +509,57 @@ describe('posService', () => {
       expect.stringContaining('Ketik: <jual/masuk>'),
     );
     expect(result.action).toBe('fast_text_fallback');
+  });
+
+  it('keeps the original message when asking a free-form AI clarification', async () => {
+    extractEntitiesMock.mockResolvedValue({
+      intent: 'pos',
+      items: [],
+      confidence: 0.4,
+      needsClarification: true,
+      clarificationQuestion: 'Satuan untuk telur dan harganya berapa?',
+    });
+    const session = createSession();
+
+    const result = await handleTextPos({
+      shop: createShop(),
+      session,
+      message: { from: '+6281234567890', type: 'text', text: 'budi beli 3 telur' },
+    });
+
+    expect(setSessionStateMock).toHaveBeenCalledWith(session, 'clarifying', {
+      lastQuestion: 'Satuan untuk telur dan harganya berapa?',
+      clarifyingText: 'budi beli 3 telur',
+    });
+    expect(result.action).toBe('clarifying');
+  });
+
+  it('answers a clarification by re-extracting the original message plus the reply', async () => {
+    // First pass needs clarification; the merged retry succeeds with a priced item.
+    const product = createProduct({ _id: 'product-1', name: 'Telur', sellPrice: 1000 });
+    resolveProductMock.mockResolvedValue({ product, rawName: 'telur', created: false });
+    extractEntitiesMock.mockResolvedValue({
+      intent: 'pos',
+      items: [{ rawName: 'telur', qty: 3, unit: null, unitPrice: 3000, action: 'sale' }],
+      confidence: 0.9,
+      needsClarification: false,
+    });
+    transactionCreateMock.mockImplementation(async (payload) => ({ _id: 'txn-1', ...payload }));
+    const session = createSession({
+      state: 'clarifying',
+      context: { clarifyingText: 'budi beli 3 telur' },
+    });
+
+    const result = await handleClarifyingReply({
+      shop: createShop(),
+      session,
+      message: { from: '+6281234567890', type: 'text', text: '3000' },
+    });
+
+    // Extraction runs on the combined text, not the bare "3000".
+    expect(extractEntitiesMock).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'budi beli 3 telur 3000' }),
+    );
+    expect(result.action).toBe('pending_confirmation');
   });
 });

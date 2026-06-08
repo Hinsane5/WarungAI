@@ -59,6 +59,7 @@ function idleContext() {
     pendingTransactionId: undefined,
     failureCount: 0,
     lastQuestion: undefined,
+    clarifyingText: undefined,
     pendingPriceItem: undefined,
     pendingPriceUpdate: undefined,
     pendingPromoOrder: undefined,

@@ -10,6 +10,7 @@ import {
 import {
   cancelPendingFlow,
   confirmPendingTransaction,
+  handleClarifyingReply,
   handleMissingPriceReply,
   handleTextPos,
 } from '../services/posService.js';
@@ -196,6 +197,12 @@ export async function routeInboundMessage(message) {
 
   if (session.state === 'clarifying' && session.context?.pendingPriceUpdate) {
     return handlePendingPriceUpdateReply({ shop, session, message });
+  }
+
+  // A reply to a free-form AI clarification (POS): re-run extraction on the original
+  // message + this answer combined, instead of parsing the answer in isolation.
+  if (session.state === 'clarifying' && session.context?.clarifyingText) {
+    return handleClarifyingReply({ shop, session, message });
   }
 
   if (session.state === 'awaiting_kasbon_reminder_approval') {

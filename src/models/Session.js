@@ -21,6 +21,9 @@ const sessionSchema = new mongoose.Schema(
       pendingTransactionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' },
       failureCount: { type: Number, default: 0 },
       lastQuestion: String,
+      // The owner's original message kept while we wait for a free-form AI clarification
+      // answer, so the reply is interpreted together with it instead of in isolation.
+      clarifyingText: String,
       pendingPriceItem: { type: mongoose.Schema.Types.Mixed },
       pendingPriceUpdate: { type: mongoose.Schema.Types.Mixed },
       pendingPromoOrder: { type: mongoose.Schema.Types.Mixed },
