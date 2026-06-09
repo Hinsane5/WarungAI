@@ -481,6 +481,36 @@ select {
   color: var(--wa-ink-700);
 }
 
+.wa-link {
+  color: var(--wa-green-600);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.wa-link:hover {
+  text-decoration: underline;
+}
+
+.crm-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--wa-border);
+  border-radius: var(--r-pill);
+  background: var(--wa-surface);
+  color: var(--wa-ink-700);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.crm-copy-btn:hover {
+  background: var(--wa-green-100);
+  border-color: var(--wa-green-300);
+}
+
 .crm-preview__segments {
   display: flex;
   flex-wrap: wrap;

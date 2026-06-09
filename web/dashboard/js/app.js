@@ -1,4 +1,4 @@
-/* global Chart, URLSearchParams, document, localStorage, window, setInterval */
+/* global Chart, URLSearchParams, document, localStorage, window, setInterval, navigator */
 
 const params = new URLSearchParams(window.location.search);
 const tokenInput = document.querySelector('#dashboardToken');
@@ -228,6 +228,9 @@ function messageHtml(text) {
 }
 
 const crmPreviewButton = document.querySelector('#crmPreviewButton');
+// Reminder message templates, kept in a list so the copy button can grab the exact text
+// (avoids HTML-attribute escaping of multi-line messages).
+let crmReminderMessages = [];
 
 async function loadCrmPreview() {
   const result = document.querySelector('#crmPreviewResult');
@@ -242,6 +245,7 @@ async function loadCrmPreview() {
   result.innerHTML = '<div class="empty-state">Menjalankan preview…</div>';
   try {
     const data = await api('/api/dashboard/crm/preview');
+    crmReminderMessages = data.customerReminders.map((reminder) => reminder.message);
     const s = data.summary;
     const parts = [
       `<div class="crm-preview__summary">Jadwal evaluasi harian: ${escapeHtml(
@@ -259,15 +263,25 @@ async function loadCrmPreview() {
     }
 
     if (data.customerReminders.length) {
-      for (const reminder of data.customerReminders) {
+      data.customerReminders.forEach((reminder, index) => {
+        // wa.me uses the number without "+". Pre-fill the reminder text so one click opens
+        // the customer's WhatsApp with the message ready to send.
+        const digits = String(reminder.phone || '').replace(/\D/gu, '');
+        const phoneHtml = digits
+          ? `<a class="wa-link" href="https://wa.me/${digits}?text=${encodeURIComponent(
+              reminder.message,
+            )}" target="_blank" rel="noopener">💬 ${escapeHtml(reminder.phone)}</a>`
+          : '<span class="muted">No. belum terdaftar</span>';
         parts.push(
           `<div class="crm-msg"><div class="crm-msg__head">${escapeHtml(
             reminder.name,
-          )} <span class="badge">${escapeHtml(reminder.segment)}</span> → ${escapeHtml(
-            reminder.phone,
-          )}</div><div class="crm-msg__body">${messageHtml(reminder.message)}</div></div>`,
+          )} <span class="badge">${escapeHtml(
+            reminder.segment,
+          )}</span> → ${phoneHtml}</div><div class="crm-msg__body">${messageHtml(
+            reminder.message,
+          )}</div><button type="button" class="crm-copy-btn" data-copy-index="${index}">📋 <span class="crm-copy-btn__label">Salin pesan</span></button></div>`,
         );
-      }
+      });
     } else {
       parts.push(
         '<div class="muted">Tidak ada pengingat belanja yang jatuh tempo hari ini.</div>',
@@ -296,6 +310,35 @@ async function loadCrmPreview() {
 if (crmPreviewButton) {
   crmPreviewButton.addEventListener('click', loadCrmPreview);
 }
+
+// Copy a reminder template to the clipboard so the owner can paste it into the customer's
+// WhatsApp. Delegated so it works for dynamically-rendered reminder rows.
+const crmPreviewResultEl = document.querySelector('#crmPreviewResult');
+crmPreviewResultEl?.addEventListener('click', async (event) => {
+  const button = event.target.closest('.crm-copy-btn');
+  if (!button) {
+    return;
+  }
+  const message = crmReminderMessages[Number(button.dataset.copyIndex)];
+  if (message == null) {
+    return;
+  }
+  const label = button.querySelector('.crm-copy-btn__label');
+  try {
+    await navigator.clipboard.writeText(message);
+    if (label) {
+      const original = label.textContent;
+      label.textContent = 'Tersalin!';
+      setTimeout(() => {
+        label.textContent = original;
+      }, 1500);
+    }
+  } catch {
+    if (label) {
+      label.textContent = 'Gagal menyalin';
+    }
+  }
+});
 
 const loyaltyQrImg = document.querySelector('#loyaltyQrImg');
 const loyaltyQrLink = document.querySelector('#loyaltyQrLink');
