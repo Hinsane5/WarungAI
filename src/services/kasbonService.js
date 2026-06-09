@@ -4,6 +4,7 @@ import { sendText } from '../messaging/whatsapp.js';
 import { Customer } from '../models/Customer.js';
 import { Kasbon } from '../models/Kasbon.js';
 import { logger } from '../utils/logger.js';
+import { resolvePricing } from '../utils/pricing.js';
 import { resolveProduct } from './productService.js';
 import { setSessionState } from './sessionService.js';
 
@@ -101,10 +102,6 @@ async function findOrCreateCustomer({ shopId, customerRef }) {
   return { customer, created: true };
 }
 
-function priceForKasbonItem(extractedItem, product) {
-  return extractedItem.unitPrice ?? product.sellPrice ?? 0;
-}
-
 async function buildKasbonItems(shopId, extractedItems) {
   const items = [];
 
@@ -114,14 +111,21 @@ async function buildKasbonItems(shopId, extractedItems) {
       rawName: extractedItem.rawName,
       unit: extractedItem.unit,
     });
-    const unitPrice = priceForKasbonItem(extractedItem, product);
+    const qty = extractedItem.qty;
+    // Same price semantics as POS: a stated number defaults to the total for the whole
+    // quantity ('total'); 'per_unit' multiplies. With no stated price, fall back to the
+    // product's per-unit sell price.
+    const priced =
+      extractedItem.unitPrice != null
+        ? resolvePricing({ qty, price: extractedItem.unitPrice, priceBasis: extractedItem.priceBasis })
+        : { unitPrice: product.sellPrice ?? 0, lineTotal: Math.round(qty * (product.sellPrice ?? 0)) };
 
     items.push({
       name: product.name,
-      qty: extractedItem.qty,
+      qty,
       unit: extractedItem.unit ?? product.unit,
-      unitPrice,
-      lineTotal: Math.round(extractedItem.qty * unitPrice),
+      unitPrice: priced.unitPrice,
+      lineTotal: priced.lineTotal,
     });
   }
 

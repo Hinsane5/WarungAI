@@ -283,12 +283,13 @@ const responseJsonSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['rawName', 'qty', 'unit', 'unitPrice', 'action'],
+        required: ['rawName', 'qty', 'unit', 'unitPrice', 'priceBasis', 'action'],
         properties: {
           rawName: { type: 'string' },
           qty: { type: 'number' },
           unit: { anyOf: [{ type: 'string' }, { type: 'null' }] },
           unitPrice: { anyOf: [{ type: 'integer' }, { type: 'null' }] },
+          priceBasis: { type: 'string', enum: ['total', 'per_unit'] },
           action: { type: 'string', enum: ['sale', 'stock_in'] },
         },
       },

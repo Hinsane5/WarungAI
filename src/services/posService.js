@@ -5,6 +5,7 @@ import { config } from '../config/index.js';
 import { sendText } from '../messaging/whatsapp.js';
 import { Product } from '../models/Product.js';
 import { Transaction } from '../models/Transaction.js';
+import { resolvePricing } from '../utils/pricing.js';
 import { createPricedProduct, resolveProduct, learnAlias } from './productService.js';
 import { setSessionState } from './sessionService.js';
 
@@ -40,17 +41,19 @@ function lineTotal(qty, unitPrice) {
   return Math.round(qty * unitPrice);
 }
 
-// A typed trailing number is the TOTAL paid for the whole quantity — "3 telur 6000"
-// means Rp6.000 for all 3 (Rp2.000 each), not Rp6.000 each. When no number is given,
-// fall back to the product's set price as the per-unit price (so "beli 3 telur" with a
-// priced product auto-uses it).
+// A stated price is interpreted by its priceBasis: 'total' (default) means the number is
+// for the whole quantity — "3 telur 6000" = Rp6.000 for all 3 (Rp2.000 each); 'per_unit'
+// means it's the price of one item — "3 telur 3000 per butir" = Rp3.000 each (Rp9.000 total).
+// When no number is given, fall back to the product's set price as the per-unit price.
 function resolveLine(extractedItem, product) {
   const qty = extractedItem.qty ?? 0;
 
   if (extractedItem.unitPrice != null) {
-    const total = Math.round(extractedItem.unitPrice);
-    const unitPrice = qty > 0 ? Math.round(total / qty) : total;
-    return { unitPrice, lineTotal: total };
+    return resolvePricing({
+      qty,
+      price: extractedItem.unitPrice,
+      priceBasis: extractedItem.priceBasis,
+    });
   }
 
   const setUnitPrice =
@@ -181,7 +184,11 @@ function formatConfirmation(transaction) {
   const summary = transaction.items
     .map((item) => {
       const priceText = item.lineTotal ? ` ${formatMoney(item.lineTotal)}` : '';
-      return `${formatQty(item)} ${item.name} (${actionLabel(item.action)}${priceText})`;
+      // Show the per-unit price when buying more than one, so a wrong total/per-unit
+      // reading is visible before the owner confirms (never commit money silently).
+      const perUnitText =
+        item.qty > 1 && item.unitPrice ? ` @${formatMoney(item.unitPrice)}` : '';
+      return `${formatQty(item)} ${item.name} (${actionLabel(item.action)}${priceText}${perUnitText})`;
     })
     .join(', ');
   const confidencePrefix =
@@ -229,8 +236,12 @@ async function buildPendingItems(shopId, extractedItems, options = {}) {
 
     let finalProduct = product;
     if (!finalProduct) {
-      const totalPrice = extractedItem.unitPrice ?? 0;
-      const unitPrice = extractedItem.qty > 0 ? Math.round(totalPrice / extractedItem.qty) : totalPrice;
+      const priced = resolvePricing({
+        qty: extractedItem.qty,
+        price: extractedItem.unitPrice ?? 0,
+        priceBasis: extractedItem.priceBasis,
+      });
+      const unitPrice = priced?.unitPrice ?? 0;
       finalProduct = await createPricedProduct(
         {
           shopId,

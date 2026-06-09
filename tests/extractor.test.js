@@ -30,6 +30,7 @@ describe('extractEntities', () => {
         qty: 2,
         unit: 'dus',
         unitPrice: null,
+        priceBasis: 'total',
         action: 'stock_in',
       },
       {
@@ -37,6 +38,7 @@ describe('extractEntities', () => {
         qty: 1,
         unit: 'galon',
         unitPrice: null,
+        priceBasis: 'total',
         action: 'sale',
       },
     ]);
@@ -68,6 +70,7 @@ describe('extractEntities', () => {
         qty: 2,
         unit: null,
         unitPrice: null,
+        priceBasis: 'total',
         action: 'sale',
       },
     ]);

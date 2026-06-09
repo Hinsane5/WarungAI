@@ -161,6 +161,66 @@ describe('posService', () => {
     expect(result.action).toBe('pending_confirmation');
   });
 
+  it("records qty x price when the owner prices per unit ('3 telur 3000 per butir' = Rp9.000)", async () => {
+    const product = createProduct({ _id: 'product-1', name: 'Telur', sellPrice: 1000 });
+    resolveProductMock.mockResolvedValue({ product, rawName: 'telur', created: false });
+    extractEntitiesMock.mockResolvedValue({
+      intent: 'pos',
+      items: [
+        { rawName: 'telur', qty: 3, unit: null, unitPrice: 3000, priceBasis: 'per_unit', action: 'sale' },
+      ],
+      confidence: 0.95,
+      needsClarification: false,
+    });
+    transactionCreateMock.mockImplementation(async (payload) => ({ _id: 'txn-pu', ...payload }));
+
+    const result = await handleTextPos({
+      shop: createShop(),
+      session: createSession(),
+      message: { from: '+6281234567890', type: 'text', text: 'budi belanja 3 telur 3000 per butir' },
+    });
+
+    expect(transactionCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'sale',
+        totalAmount: 9000,
+        cashDelta: 9000,
+        items: [expect.objectContaining({ qty: 3, unitPrice: 3000, lineTotal: 9000 })],
+      }),
+    );
+    // Per-unit price is surfaced in the confirmation so a wrong reading is visible.
+    expect(sendTextMock).toHaveBeenCalledWith('+6281234567890', expect.stringContaining('@'));
+    expect(result.action).toBe('pending_confirmation');
+  });
+
+  it("records the total when the owner gives a bare number ('3 telur 6000' = Rp6.000)", async () => {
+    const product = createProduct({ _id: 'product-1', name: 'Telur', sellPrice: 1000 });
+    resolveProductMock.mockResolvedValue({ product, rawName: 'telur', created: false });
+    extractEntitiesMock.mockResolvedValue({
+      intent: 'pos',
+      items: [
+        { rawName: 'telur', qty: 3, unit: null, unitPrice: 6000, priceBasis: 'total', action: 'sale' },
+      ],
+      confidence: 0.95,
+      needsClarification: false,
+    });
+    transactionCreateMock.mockImplementation(async (payload) => ({ _id: 'txn-tot', ...payload }));
+
+    await handleTextPos({
+      shop: createShop(),
+      session: createSession(),
+      message: { from: '+6281234567890', type: 'text', text: 'laku 3 telur 6000' },
+    });
+
+    expect(transactionCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalAmount: 6000,
+        cashDelta: 6000,
+        items: [expect.objectContaining({ qty: 3, unitPrice: 2000, lineTotal: 6000 })],
+      }),
+    );
+  });
+
   it('asks for price instead of recording a zero-rupiah sale', async () => {
     const product = createProduct({
       _id: 'product-1',

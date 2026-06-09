@@ -4,7 +4,10 @@ export const extractedItemSchema = z.object({
   rawName: z.string().min(1),
   qty: z.number().positive(),
   unit: z.string().nullable().default(null),
+  // The rupiah amount the owner stated (raw, not divided/multiplied). `priceBasis` says
+  // whether that amount is the total for the whole quantity or the price of one item.
   unitPrice: z.number().int().nonnegative().nullable().default(null),
+  priceBasis: z.enum(['total', 'per_unit']).default('total'),
   action: z.enum(['sale', 'stock_in']),
 });
 
