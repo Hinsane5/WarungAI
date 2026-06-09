@@ -270,7 +270,7 @@ async function loadCrmPreview() {
         const phoneHtml = digits
           ? `<a class="wa-link" href="https://wa.me/${digits}?text=${encodeURIComponent(
               reminder.message,
-            )}" target="_blank" rel="noopener">💬 ${escapeHtml(reminder.phone)}</a>`
+            )}" target="_blank" rel="noopener">wa.me/${digits}</a>`
           : '<span class="muted">No. belum terdaftar</span>';
         parts.push(
           `<div class="crm-msg"><div class="crm-msg__head">${escapeHtml(
