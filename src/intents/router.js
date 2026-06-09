@@ -148,7 +148,7 @@ export async function routeInboundMessage(message) {
     await session.save();
     await sendText(
       message.from,
-      `Catatan: aksi "${notice}" sebelumnya belum selesai dan sudah dibatalkan karena tidak ada balasan. Datanya tidak berubah — mulai lagi kalau perlu ya.`,
+      `Catatan: ${notice} sebelumnya belum selesai dan otomatis dibatalkan karena tidak ada balasan. Datanya tidak berubah. Kalau mau lanjut, kirim ulang transaksinya ya.`,
     );
   }
 

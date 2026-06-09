@@ -149,11 +149,15 @@ describe('posService', () => {
         cashDelta: -200000,
       }),
     );
-    expect(setSessionStateMock).toHaveBeenCalledWith(session, 'awaiting_confirmation', {
-      pendingTransactionId: 'txn-1',
-      failureCount: 0,
-      pendingPriceItem: undefined,
-    });
+    expect(setSessionStateMock).toHaveBeenCalledWith(
+      session,
+      'awaiting_confirmation',
+      expect.objectContaining({
+        pendingTransactionId: 'txn-1',
+        failureCount: 0,
+        pendingPriceItem: undefined,
+      }),
+    );
     expect(sendTextMock).toHaveBeenCalledWith(
       '+6281234567890',
       expect.stringContaining('Benar? Balas Y / T'),
@@ -436,11 +440,15 @@ describe('posService', () => {
         ],
       }),
     );
-    expect(setSessionStateMock).toHaveBeenCalledWith(session, 'awaiting_confirmation', {
-      pendingTransactionId: 'txn-price',
-      failureCount: 0,
-      pendingPriceItem: undefined,
-    });
+    expect(setSessionStateMock).toHaveBeenCalledWith(
+      session,
+      'awaiting_confirmation',
+      expect.objectContaining({
+        pendingTransactionId: 'txn-price',
+        failureCount: 0,
+        pendingPriceItem: undefined,
+      }),
+    );
     expect(sendTextMock).toHaveBeenCalledWith(
       '+6281234567890',
       expect.stringContaining('Benar? Balas Y / T'),

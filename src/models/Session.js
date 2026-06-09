@@ -24,6 +24,9 @@ const sessionSchema = new mongoose.Schema(
       // The owner's original message kept while we wait for a free-form AI clarification
       // answer, so the reply is interpreted together with it instead of in isolation.
       clarifyingText: String,
+      // Short human summary of the transaction awaiting Y/T (e.g. "2 dus Indomie"), used to
+      // name the action in the "didn't finish" notice when a flow is abandoned.
+      pendingSummary: String,
       pendingPriceItem: { type: mongoose.Schema.Types.Mixed },
       pendingPriceUpdate: { type: mongoose.Schema.Types.Mixed },
       pendingPromoOrder: { type: mongoose.Schema.Types.Mixed },

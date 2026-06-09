@@ -30,7 +30,9 @@ export function describePendingAction(session) {
   const ctx = plainContext(session.context);
   switch (session.state) {
     case 'awaiting_confirmation':
-      return 'konfirmasi transaksi';
+      return ctx.pendingSummary
+        ? `konfirmasi transaksi ${ctx.pendingSummary}`
+        : 'konfirmasi transaksi';
     case 'awaiting_kasbon_reminder_approval':
       return 'kirim pengingat kasbon';
     case 'awaiting_promo_order':
@@ -48,7 +50,7 @@ export function describePendingAction(session) {
           ? `catat "${ctx.pendingPriceItem.rawName}"`
           : 'catat transaksi';
       }
-      return 'lanjutkan transaksi';
+      return ctx.clarifyingText ? `transaksi "${ctx.clarifyingText}"` : 'lanjutkan transaksi';
     default:
       return 'lanjutkan transaksi';
   }
@@ -60,6 +62,7 @@ function idleContext() {
     failureCount: 0,
     lastQuestion: undefined,
     clarifyingText: undefined,
+    pendingSummary: undefined,
     pendingPriceItem: undefined,
     pendingPriceUpdate: undefined,
     pendingPromoOrder: undefined,

@@ -109,6 +109,7 @@ export async function cancelPendingFlow({ session }) {
     failureCount: 0,
     lastQuestion: undefined,
     clarifyingText: undefined,
+    pendingSummary: undefined,
     pendingPriceItem: undefined,
     pendingPriceUpdate: undefined,
     pendingPromoOrder: undefined,
@@ -291,6 +292,8 @@ async function createPendingTransaction({ shop, session, message, extraction, it
     pendingTransactionId: transaction._id,
     failureCount: 0,
     pendingPriceItem: undefined,
+    clarifyingText: undefined,
+    pendingSummary: transaction.items.map((item) => `${formatQty(item)} ${item.name}`).join(', '),
   });
   await sendText(message.from, formatConfirmation(transaction));
 

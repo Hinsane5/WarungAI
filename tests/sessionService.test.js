@@ -10,7 +10,7 @@ vi.mock('../src/models/Session.js', () => ({
   },
 }));
 
-const { getOrCreateSession, isSessionStale, setSessionState } =
+const { describePendingAction, getOrCreateSession, isSessionStale, setSessionState } =
   await import('../src/services/sessionService.js');
 
 function createSession(overrides = {}) {
@@ -108,6 +108,27 @@ describe('sessionService', () => {
     expect(session.state).toBe('idle');
     expect(session.expiredNotice).toBe('ubah harga Aqua Galon 19L');
     expect(session.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('names the original message when an abandoned clarification expires', async () => {
+    const session = createSession({
+      state: 'clarifying',
+      context: { clarifyingText: 'budi beli 3 telur' },
+      lastActivityAt: new Date('2026-05-30T09:45:00.000Z'),
+    });
+    sessionFindOneMock.mockResolvedValue(session);
+
+    await getOrCreateSession({ shopId: 'shop-1', ownerPhone: '+6281234567890' });
+
+    expect(session.expiredNotice).toBe('transaksi "budi beli 3 telur"');
+  });
+
+  it('names the pending items when an abandoned Y/T confirmation expires', () => {
+    const notice = describePendingAction({
+      state: 'awaiting_confirmation',
+      context: { pendingSummary: '2 dus Indomie' },
+    });
+    expect(notice).toBe('konfirmasi transaksi 2 dus Indomie');
   });
 
   it('resets a stale existing session to idle', async () => {
