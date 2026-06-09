@@ -59,6 +59,16 @@ vi.mock('../src/messaging/whatsapp.js', () => ({
   sendText: sendTextMock,
 }));
 
+const parseDaftarCommandMock = vi.hoisted(() => vi.fn());
+const registerLoyaltyByDaftarMock = vi.hoisted(() => vi.fn());
+const buildWaRegistrationLinkMock = vi.hoisted(() => vi.fn());
+
+vi.mock('../src/services/loyaltyService.js', () => ({
+  parseDaftarCommand: parseDaftarCommandMock,
+  registerLoyaltyByDaftar: registerLoyaltyByDaftarMock,
+  buildWaRegistrationLink: buildWaRegistrationLinkMock,
+}));
+
 const { routeInboundMessage } = await import('../src/intents/router.js');
 
 describe('routeInboundMessage', () => {
@@ -85,6 +95,8 @@ describe('routeInboundMessage', () => {
     });
     sendTextMock.mockResolvedValue({ messages: [{ id: 'sent-1' }] });
     describePendingActionMock.mockReturnValue('ubah harga');
+    parseDaftarCommandMock.mockReturnValue(null);
+    buildWaRegistrationLinkMock.mockReturnValue('https://wa.me/6281200000000?text=DAFTAR%20s');
     // simulate cancelPendingFlow resetting the session to idle
     cancelPendingFlowMock.mockImplementation(async ({ session }) => {
       session.state = 'idle';
@@ -157,6 +169,61 @@ describe('routeInboundMessage', () => {
     );
     expect(handleTextPosMock).not.toHaveBeenCalled();
     expect(result).toEqual({ handled: true, action: 'help' });
+  });
+
+  it('registers a customer from a DAFTAR message and never onboards a shop', async () => {
+    parseDaftarCommandMock.mockReturnValue({ code: 'warung-slug' });
+    registerLoyaltyByDaftarMock.mockResolvedValue({ ok: true, customer: { _id: 'cust-1' } });
+
+    const result = await routeInboundMessage({
+      from: '+6281100000000',
+      profileName: 'Andi',
+      type: 'text',
+      text: 'DAFTAR warung-slug',
+    });
+
+    expect(registerLoyaltyByDaftarMock).toHaveBeenCalledWith({
+      from: '+6281100000000',
+      profileName: 'Andi',
+      code: 'warung-slug',
+    });
+    expect(findOrCreateByOwnerPhoneMock).not.toHaveBeenCalled();
+    expect(handleTextPosMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ handled: true, action: 'loyalty_registered', customerId: 'cust-1' });
+  });
+
+  it('tells the sender when a DAFTAR code is unknown (still no shop onboarding)', async () => {
+    parseDaftarCommandMock.mockReturnValue({ code: 'nope' });
+    registerLoyaltyByDaftarMock.mockResolvedValue({ ok: false, reason: 'shop_not_found' });
+
+    const result = await routeInboundMessage({
+      from: '+6281100000000',
+      type: 'text',
+      text: 'DAFTAR nope',
+    });
+
+    expect(sendTextMock).toHaveBeenCalledWith(
+      '+6281100000000',
+      expect.stringContaining('kode warung tidak ditemukan'),
+    );
+    expect(findOrCreateByOwnerPhoneMock).not.toHaveBeenCalled();
+    expect(result.action).toBe('loyalty_register_failed');
+  });
+
+  it('replies with the registration link on a "qr loyalty" command', async () => {
+    const result = await routeInboundMessage({
+      from: '+6281234567890',
+      profileName: 'Bu Sri',
+      type: 'text',
+      text: 'qr loyalty',
+    });
+
+    expect(sendTextMock).toHaveBeenCalledWith(
+      '+6281234567890',
+      expect.stringContaining('https://wa.me/6281200000000'),
+    );
+    expect(handleTextPosMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ handled: true, action: 'loyalty_link' });
   });
 
   it('routes awaiting-confirmation text replies to the confirmation handler', async () => {

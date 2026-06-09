@@ -8,6 +8,7 @@ process.env.WHATSAPP_PHONE_NUMBER_ID = 'test-phone-number-id';
 process.env.WHATSAPP_VERIFY_TOKEN = 'test-verify-token';
 process.env.WHATSAPP_APP_SECRET = 'test-app-secret';
 process.env.WHATSAPP_GRAPH_API_VERSION = 'v21.0';
+process.env.WHATSAPP_BOT_NUMBER = '6281200000000';
 process.env.GOOGLE_APPLICATION_CREDENTIALS = './secrets/test-gcp-service-account.json';
 process.env.GCP_PROJECT_ID = 'warungai-test';
 process.env.GCP_LOCATION = 'us-central1';

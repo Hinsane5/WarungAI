@@ -29,8 +29,14 @@ vi.mock('../src/models/Transaction.js', () => ({
   },
 }));
 
-const { buildLoyaltyQrUrl, registerLoyaltyCustomer, resolveShopByLoyaltySlug } =
-  await import('../src/services/loyaltyService.js');
+const {
+  buildLoyaltyQrUrl,
+  buildWaRegistrationLink,
+  parseDaftarCommand,
+  registerLoyaltyByDaftar,
+  registerLoyaltyCustomer,
+  resolveShopByLoyaltySlug,
+} = await import('../src/services/loyaltyService.js');
 
 function createShop(overrides = {}) {
   return {
@@ -196,5 +202,46 @@ describe('loyaltyService', () => {
     await expect(
       registerLoyaltyCustomer({ slug: 'warung-static-slug', phone: '' }),
     ).resolves.toEqual({ ok: false, reason: 'invalid_phone' });
+  });
+
+  describe('wa.me registration', () => {
+    it('parses DAFTAR messages into a shop code', () => {
+      expect(parseDaftarCommand('DAFTAR warung-static-slug')).toEqual({ code: 'warung-static-slug' });
+      expect(parseDaftarCommand('daftar warung warung-static-slug')).toEqual({
+        code: 'warung-static-slug',
+      });
+      expect(parseDaftarCommand('daftar')).toEqual({ code: null });
+      expect(parseDaftarCommand('laku 2 indomie')).toBeNull();
+    });
+
+    it('builds a wa.me deep link with the bot number + DAFTAR <slug>', () => {
+      expect(buildWaRegistrationLink(createShop())).toBe(
+        'https://wa.me/6281200000000?text=DAFTAR%20warung-static-slug',
+      );
+    });
+
+    it('refuses to register without a shop code', async () => {
+      await expect(
+        registerLoyaltyByDaftar({ from: '+628111222333', profileName: 'Budi', code: null }),
+      ).resolves.toEqual({ ok: false, reason: 'missing_code' });
+    });
+
+    it('registers the sender as a customer of the DAFTAR shop', async () => {
+      shopFindOneMock.mockResolvedValueOnce(createShop());
+      customerFindOneMock.mockResolvedValue(null);
+      customerCreateMock.mockResolvedValue(createCustomer());
+      transactionFindOneMock.mockResolvedValue(null);
+
+      const result = await registerLoyaltyByDaftar({
+        from: '+628111222333',
+        profileName: 'Budi',
+        code: 'warung-static-slug',
+      });
+
+      expect(result.ok).toBe(true);
+      expect(customerCreateMock).toHaveBeenCalledWith(
+        expect.objectContaining({ phone: '+628111222333' }),
+      );
+    });
   });
 });

@@ -104,6 +104,56 @@ export async function buildLoyaltyQr(shop) {
   return { url, qr };
 }
 
+function normalizeBotNumber(value) {
+  return String(value ?? '').replace(/\D/gu, '');
+}
+
+// wa.me deep link: customer scans -> WhatsApp opens to the bot with "DAFTAR <slug>"
+// pre-typed -> they tap send -> the bot registers their (verified) number. Returns null
+// until WHATSAPP_BOT_NUMBER is configured.
+export function buildWaRegistrationLink(shop) {
+  const botNumber = normalizeBotNumber(config.whatsapp.botNumber);
+  if (!botNumber || !shop?.loyaltyQrSlug) {
+    return null;
+  }
+  const text = `DAFTAR ${shop.loyaltyQrSlug}`;
+  return `https://wa.me/${botNumber}?text=${encodeURIComponent(text)}`;
+}
+
+export async function buildWaRegistrationQr(shop) {
+  const link = buildWaRegistrationLink(shop);
+  if (!link) {
+    return null;
+  }
+  const qr = await QRCode.toDataURL(link, {
+    width: 512,
+    margin: 2,
+    color: { dark: '#14443a', light: '#ffffff' },
+  });
+  return { link, qr };
+}
+
+// Recognize an inbound "DAFTAR <slug>" registration message. Returns the shop code (slug)
+// or null. `{ code: null }` means "daftar" with no code (we prompt to scan the QR).
+export function parseDaftarCommand(text) {
+  const match = String(text ?? '')
+    .trim()
+    .match(/^daftar(?:\s+warung)?(?:\s+(.+))?$/iu);
+  if (!match) {
+    return null;
+  }
+  return { code: match[1]?.trim() || null };
+}
+
+// Register the message sender as a loyalty customer of the shop named by the DAFTAR code.
+// The sender's WhatsApp number is their verified phone — no typing, no OTP.
+export async function registerLoyaltyByDaftar({ from, profileName, code }) {
+  if (!code) {
+    return { ok: false, reason: 'missing_code' };
+  }
+  return registerLoyaltyCustomer({ slug: code, phone: from, name: profileName });
+}
+
 export async function registerLoyaltyCustomer({ slug, phone, name, now = new Date() }) {
   const shop = await resolveShopByLoyaltySlug(slug);
 

@@ -19,6 +19,11 @@ import {
   handlePriceUpdateCommand,
   parsePriceUpdateCommand,
 } from '../services/priceCommandService.js';
+import {
+  buildWaRegistrationLink,
+  parseDaftarCommand,
+  registerLoyaltyByDaftar,
+} from '../services/loyaltyService.js';
 import { handleRecapCommand, parseRecapCommand } from '../services/recapService.js';
 import { handleScheduleCommand, parseScheduleCommand } from '../services/scheduleService.js';
 import { findOrCreateByOwnerPhone } from '../services/shopService.js';
@@ -56,6 +61,7 @@ const HELP_MESSAGE = [
   '📊 *Lainnya*',
   '• Cek stok + promo → _cek stok indomie_',
   '• Rekap hari ini → _rekap sekarang_',
+  '• Link daftar pelanggan → _qr loyalty_',
   '• Jadwal evaluasi → _jadwal evaluasi 19.00_',
   '',
   'Setiap transaksi minta konfirmasi *Y/T* sebelum disimpan.',
@@ -63,6 +69,13 @@ const HELP_MESSAGE = [
 
 function isHelpCommand(text) {
   return /^\s*\/?(?:bantuan|help)\s*$/iu.test(text);
+}
+
+// Owner asks for the customer-registration link/QR (the wa.me deep link).
+function isLoyaltyLinkCommand(text) {
+  return /^\s*(?:qr(?:\s+(?:loyalty|pelanggan|daftar))?|(?:link|kode)\s+(?:loyalty|pelanggan|daftar))\s*$/iu.test(
+    text,
+  );
 }
 
 const PENDING_STATES = new Set([
@@ -82,6 +95,7 @@ function isCancelCommand(text) {
 function isInterruptingCommand(text) {
   return Boolean(
     isHelpCommand(text) ||
+      isLoyaltyLinkCommand(text) ||
       parseRecapCommand(text) ||
       parseScheduleCommand(text) ||
       parsePriceUpdateCommand(text) ||
@@ -143,6 +157,30 @@ async function handleAudioMessage({ shop, session, message }) {
 }
 
 export async function routeInboundMessage(message) {
+  // A customer scanning the loyalty wa.me QR sends "DAFTAR <shop>". Handle this BEFORE owner
+  // onboarding so a customer's number is never mistaken for (and onboarded as) a new shop.
+  if (message.type === 'text' && message.text) {
+    const daftar = parseDaftarCommand(message.text);
+    if (daftar) {
+      const result = await registerLoyaltyByDaftar({
+        from: message.from,
+        profileName: message.profileName,
+        code: daftar.code,
+      });
+      if (result.ok) {
+        // registerLoyaltyCustomer already sent the stamp confirmation to the customer.
+        return { handled: true, action: 'loyalty_registered', customerId: result.customer._id };
+      }
+      await sendText(
+        message.from,
+        result.reason === 'missing_code'
+          ? 'Untuk daftar loyalty, scan QR yang ada di warung ya.'
+          : 'Maaf, kode warung tidak ditemukan. Pastikan scan QR dari warung yang benar.',
+      );
+      return { handled: true, action: 'loyalty_register_failed', reason: result.reason };
+    }
+  }
+
   const { shop, created } = await findOrCreateByOwnerPhone({
     ownerPhone: message.from,
     ownerName: message.profileName,
@@ -228,6 +266,21 @@ export async function routeInboundMessage(message) {
     if (handled) {
       return handled;
     }
+  }
+
+  if (isLoyaltyLinkCommand(message.text)) {
+    const link = buildWaRegistrationLink(shop);
+    await sendText(
+      message.from,
+      link
+        ? [
+            '🔗 *Link Daftar Pelanggan*',
+            'Bagikan atau print link/QR ini. Pelanggan tinggal buka → kirim → otomatis terdaftar:',
+            link,
+          ].join('\n')
+        : 'Nomor bot WhatsApp belum diatur, jadi link daftar pelanggan belum bisa dibuat.',
+    );
+    return { handled: true, action: 'loyalty_link' };
   }
 
   if (parseRecapCommand(message.text)) {

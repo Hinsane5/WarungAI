@@ -22,6 +22,9 @@ const envSchema = z
     WHATSAPP_VERIFY_TOKEN: z.string().min(1),
     WHATSAPP_APP_SECRET: z.string().min(1),
     WHATSAPP_GRAPH_API_VERSION: z.string().min(1).default('v21.0'),
+    // The bot's dialable WhatsApp number (digits, e.g. 6281234567890) used to build the
+    // customer-registration wa.me link/QR. Empty until a real bot is connected.
+    WHATSAPP_BOT_NUMBER: z.string().default(''),
 
     N8N_OUTBOUND_URL: z.string().default(''),
     N8N_OUTBOUND_SECRET: z.string().default(''),
@@ -106,6 +109,7 @@ export const config = {
     verifyToken: parsedEnv.data.WHATSAPP_VERIFY_TOKEN,
     appSecret: parsedEnv.data.WHATSAPP_APP_SECRET,
     graphApiVersion: parsedEnv.data.WHATSAPP_GRAPH_API_VERSION,
+    botNumber: parsedEnv.data.WHATSAPP_BOT_NUMBER,
   },
   n8n: {
     outboundUrl: parsedEnv.data.N8N_OUTBOUND_URL,
