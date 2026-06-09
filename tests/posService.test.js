@@ -579,6 +579,30 @@ describe('posService', () => {
     expect(result.action).toBe('fast_text_fallback');
   });
 
+  it('never sends an empty reply when a query has no clarification text', async () => {
+    extractEntitiesMock.mockResolvedValue({
+      intent: 'query',
+      items: [],
+      confidence: 0.9,
+      needsClarification: false,
+      clarificationQuestion: null,
+    });
+    const session = createSession();
+
+    const result = await handleTextPos({
+      shop: createShop(),
+      session,
+      message: { from: '+6281234567890', type: 'text', text: 'rekap sekarang' },
+    });
+
+    expect(sendTextMock).toHaveBeenCalledWith('+6281234567890', expect.stringContaining('/bantuan'));
+    // the reply body is a non-empty string, never null/undefined
+    const [, body] = sendTextMock.mock.calls.at(-1);
+    expect(typeof body).toBe('string');
+    expect(body.length).toBeGreaterThan(0);
+    expect(result.action).toBe('clarifying');
+  });
+
   it('keeps the original message when asking a free-form AI clarification', async () => {
     extractEntitiesMock.mockResolvedValue({
       intent: 'pos',

@@ -19,6 +19,7 @@ import {
   handlePriceUpdateCommand,
   parsePriceUpdateCommand,
 } from '../services/priceCommandService.js';
+import { handleRecapCommand, parseRecapCommand } from '../services/recapService.js';
 import { handleScheduleCommand, parseScheduleCommand } from '../services/scheduleService.js';
 import { findOrCreateByOwnerPhone } from '../services/shopService.js';
 import {
@@ -44,6 +45,7 @@ const HELP_MESSAGE = [
   '- Catat kasbon: "kasbon budi 2 rokok 50000"',
   '- Tagih kasbon: "tagih budi"',
   '- Cek stok + promo distributor: "cek stok indomie"',
+  '- Lihat rekap hari ini: "rekap sekarang"',
   '- Cek/ubah jadwal evaluasi: "jadwal evaluasi" atau "jadwal evaluasi 19.00"',
   'Setiap transaksi akan minta konfirmasi Y/T sebelum disimpan.',
 ].join('\n');
@@ -69,6 +71,7 @@ function isCancelCommand(text) {
 function isInterruptingCommand(text) {
   return Boolean(
     isHelpCommand(text) ||
+      parseRecapCommand(text) ||
       parseScheduleCommand(text) ||
       parsePriceUpdateCommand(text) ||
       parseStockCheckCommand(text) ||
@@ -214,6 +217,10 @@ export async function routeInboundMessage(message) {
     if (handled) {
       return handled;
     }
+  }
+
+  if (parseRecapCommand(message.text)) {
+    return handleRecapCommand({ shop, message });
   }
 
   if (parseStockCheckCommand(message.text)) {

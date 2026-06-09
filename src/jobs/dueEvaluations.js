@@ -2,6 +2,7 @@ import { config } from '../config/index.js';
 import { Shop } from '../models/Shop.js';
 import { exportTransactions } from '../services/bigqueryService.js';
 import { logger } from '../utils/logger.js';
+import { sendDailyRecap } from '../services/recapService.js';
 import { runCreditScoreRefresh } from './creditScoreRefresh.js';
 import { runCrmNotifier } from './crmNotifier.js';
 import { runPredictiveRestock } from './predictiveRestock.js';
@@ -71,6 +72,15 @@ export async function runDueEvaluations({ now = new Date() } = {}) {
   const credit = await runCreditScoreRefresh({ now, shopIds });
   const crm = await runCrmNotifier({ now, shopFilter });
 
+  // Push each due shop's daily recap to the owner (start of day → now).
+  let recapsSent = 0;
+  for (const entry of due) {
+    const result = await sendDailyRecap(entry.shop, { now });
+    if (result.sent) {
+      recapsSent += 1;
+    }
+  }
+
   // Mark each shop evaluated for its own local date (so it runs exactly once per day).
   await Promise.all(
     due.map((entry) =>
@@ -78,8 +88,8 @@ export async function runDueEvaluations({ now = new Date() } = {}) {
     ),
   );
 
-  logger.info({ evaluated: due.length }, 'due evaluations complete');
-  return { evaluated: due.length, restock, credit, crm };
+  logger.info({ evaluated: due.length, recapsSent }, 'due evaluations complete');
+  return { evaluated: due.length, restock, credit, crm, recapsSent };
 }
 
 // One scheduler tick (called every minute in production): run any due per-shop

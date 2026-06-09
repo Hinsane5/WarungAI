@@ -288,6 +288,35 @@ export async function getPredictiveRestock(shop) {
     .slice(0, 6);
 }
 
+// Daily recap figures for one shop, from the start of the shop's local day until `now`:
+// today's omzet + committed sale count, new kasbon recorded today, and low-stock names.
+export async function getDailyRecap(shop, { now = new Date() } = {}) {
+  const timeZone = timeZoneForShop(shop);
+  const today = startOfDay(now, timeZone);
+
+  const [sales, newKasbons, lowStock] = await Promise.all([
+    lean(
+      Transaction.find({
+        shopId: shop._id,
+        type: 'sale',
+        status: 'committed',
+        committedAt: { $gte: today, $lt: now },
+      }),
+    ),
+    lean(Kasbon.find({ shopId: shop._id, createdAt: { $gte: today, $lt: now } })),
+    getPredictiveRestock(shop),
+  ]);
+
+  return {
+    omzet: sales.reduce((total, txn) => total + (txn.totalAmount ?? 0), 0),
+    txnCount: sales.length,
+    // New debt opened today (kasbon docs created today). Appends to an existing open
+    // kasbon keep the original createdAt, so this is "new kasbon accounts opened today".
+    kasbonBaru: newKasbons.reduce((total, k) => total + (k.originalAmount ?? k.amount ?? 0), 0),
+    lowStock: lowStock.map((item) => item.name),
+  };
+}
+
 export async function getCreditScores(shop, { now = new Date() } = {}) {
   const timeZone = timeZoneForShop(shop);
   const [openKasbons, customers] = await Promise.all([

@@ -308,13 +308,17 @@ export async function handleTextPos({ shop, session, message }) {
     extraction.needsClarification ||
     extraction.items.length === 0
   ) {
+    // A query/unknown message may carry no clarification text — never send an empty reply.
+    const question =
+      extraction.clarificationQuestion ??
+      'Maaf, aku belum paham. Kirim transaksi seperti "laku 2 indomie", atau ketik /bantuan untuk daftar perintah.';
     // Keep the original message so the owner's answer to this question is interpreted
     // together with it (handleClarifyingReply), not re-parsed in isolation and lost.
     await setSessionState(session, 'clarifying', {
-      lastQuestion: extraction.clarificationQuestion,
+      lastQuestion: question,
       clarifyingText: message.text,
     });
-    await sendText(message.from, extraction.clarificationQuestion);
+    await sendText(message.from, question);
     return { action: 'clarifying' };
   }
 
