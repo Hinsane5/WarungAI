@@ -182,24 +182,21 @@ function parsePriceReply(text) {
 }
 
 function formatConfirmation(transaction) {
-  const summary = transaction.items
-    .map((item) => {
-      const priceText = item.lineTotal ? ` ${formatMoney(item.lineTotal)}` : '';
-      // Show the per-unit price when buying more than one, so a wrong total/per-unit
-      // reading is visible before the owner confirms (never commit money silently).
-      const perUnitText =
-        item.qty > 1 && item.unitPrice ? ` @${formatMoney(item.unitPrice)}` : '';
-      return `${formatQty(item)} ${item.name} (${actionLabel(item.action)}${priceText}${perUnitText})`;
-    })
-    .join(', ');
-  const confidencePrefix =
+  const lines = transaction.items.map((item) => {
+    const priceText = item.lineTotal ? ` ${formatMoney(item.lineTotal)}` : '';
+    // Show the per-unit price when buying more than one, so a wrong total/per-unit
+    // reading is visible before the owner confirms (never commit money silently).
+    const perUnitText = item.qty > 1 && item.unitPrice ? ` @${formatMoney(item.unitPrice)}` : '';
+    return `- ${formatQty(item)} ${item.name} (${actionLabel(item.action)}${priceText}${perUnitText})`;
+  });
+  const confidenceNote =
     transaction.source === 'voice' &&
     transaction.sttConfidence != null &&
     transaction.sttConfidence < config.limits.sttLowConfidenceThreshold
-      ? 'Aku kurang yakin dengan transkrip voice note. '
+      ? '\n⚠️ Aku kurang yakin dengan transkrip voice note.'
       : '';
 
-  return `${confidencePrefix}Tercatat: ${summary}. Benar? Balas Y / T`;
+  return `📝 *Cek dulu ya:*\n${lines.join('\n')}${confidenceNote}\n\nBenar? Balas Y / T`;
 }
 
 async function buildPendingItems(shopId, extractedItems, options = {}) {
@@ -582,7 +579,10 @@ export async function confirmPendingTransaction({ shop, session, message }) {
       pendingTransactionId: undefined,
       failureCount: 0,
     });
-    await sendText(message.from, `Tersimpan. Kas berubah ${formatMoney(transaction.cashDelta)}.`);
+    await sendText(
+      message.from,
+      `✅ *Tersimpan!* Kas berubah ${formatMoney(transaction.cashDelta)}.`,
+    );
     return { action: 'committed', transaction };
   }
 

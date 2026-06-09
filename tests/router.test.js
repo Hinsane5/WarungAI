@@ -153,7 +153,7 @@ describe('routeInboundMessage', () => {
 
     expect(sendTextMock).toHaveBeenCalledWith(
       '+6281234567890',
-      expect.stringContaining('Daftar perintah WarungAI'),
+      expect.stringContaining('Daftar Perintah WarungAI'),
     );
     expect(handleTextPosMock).not.toHaveBeenCalled();
     expect(result).toEqual({ handled: true, action: 'help' });

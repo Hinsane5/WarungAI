@@ -32,7 +32,7 @@ export async function soldQtyByProduct({ shopId, since }) {
 }
 
 export function formatLowStockMessage(flagged) {
-  const lines = ['Pengingat stok dari WarungAI:'];
+  const lines = ['📦 *Pengingat Stok*'];
   for (const f of flagged) {
     if (f.reason === 'expiring') {
       lines.push(`- ${f.product.name}: akan kadaluarsa dalam ${f.daysToExpiry} hari (stok ${f.product.stock}).`);
@@ -42,7 +42,7 @@ export function formatLowStockMessage(flagged) {
       lines.push(`- ${f.product.name}: diperkirakan habis ~${Math.ceil(f.daysToStockout)} hari lagi (stok ${f.product.stock}).`);
     }
   }
-  lines.push('Saatnya kulakan ya.');
+  lines.push('', 'Saatnya kulakan ya. 🛒');
   return lines.join('\n');
 }
 

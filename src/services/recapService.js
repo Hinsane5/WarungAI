@@ -10,13 +10,27 @@ function formatMoney(value) {
   }).format(value ?? 0);
 }
 
-// "Hari ini: omzet Rp…, X transaksi, kasbon baru Rp…, stok menipis: …"
+// A tidy multi-line recap (WhatsApp *bold* for the header + labels).
 export function formatDailyRecap(recap) {
-  const lowStock = recap.lowStock.length > 0 ? recap.lowStock.join(', ') : 'tidak ada';
-  return (
-    `Hari ini: omzet ${formatMoney(recap.omzet)}, ${recap.txnCount} transaksi, ` +
-    `kasbon baru ${formatMoney(recap.kasbonBaru)}, stok menipis: ${lowStock}.`
-  );
+  const lines = [
+    `📊 *Rekap Hari Ini*`,
+    `🗓️ ${recap.date}`,
+    '',
+    `💰 *Omzet* : ${formatMoney(recap.omzet)}`,
+    `🧾 *Transaksi* : ${recap.txnCount}`,
+    `📒 *Kasbon baru* : ${formatMoney(recap.kasbonBaru)}`,
+  ];
+
+  if (recap.lowStock.length > 0) {
+    lines.push(`📦 *Stok Menipis* :`);
+    for (const name of recap.lowStock) {
+      lines.push(`- ${name}`);
+    }
+  } else {
+    lines.push(`📦 *Stok Menipis* : tidak ada`);
+  }
+
+  return lines.join('\n');
 }
 
 // Owner command for an on-demand recap (start of day → now). Distinct from the scheduled

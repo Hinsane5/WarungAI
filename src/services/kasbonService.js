@@ -144,19 +144,23 @@ function summarizeItems(items) {
 
 function formatOwnerKasbonMessage({ customer, kasbon, score }) {
   const lines = [
-    `Kasbon ${customer.name} tercatat: ${summarizeItems(kasbon.items)}.`,
-    `Total kasbon baru: ${formatMoney(kasbon.amount)}.`,
+    '📒 *Kasbon Tercatat*',
+    `👤 ${customer.name}`,
+    `🛒 ${summarizeItems(kasbon.items)}`,
+    `💵 Total kasbon baru: ${formatMoney(kasbon.amount)}`,
   ];
 
   if (score.band === 'watch') {
     lines.push(
-      `Catatan: ${customer.name} masuk kategori watch. Risiko saat ini ${formatMoney(score.value)}.`,
+      '',
+      `⚠️ Catatan: ${customer.name} masuk kategori watch. Risiko saat ini ${formatMoney(score.value)}.`,
     );
   }
 
   if (score.band === 'risky') {
     lines.push(
-      `Peringatan: ${customer.name} masuk kategori risky. Risiko saat ini ${formatMoney(score.value)}.`,
+      '',
+      `🚨 Peringatan: ${customer.name} masuk kategori risky. Risiko saat ini ${formatMoney(score.value)}.`,
     );
     lines.push(`Ketik "tagih ${customer.name}" untuk menyiapkan draft pengingat.`);
   }
@@ -167,9 +171,10 @@ function formatOwnerKasbonMessage({ customer, kasbon, score }) {
 function formatCustomerDebtDetail({ shop, kasbon }) {
   const shopName = shop.name ?? 'Warung';
   return [
+    '📒 *Detail Kasbon Kamu*',
     `Info kasbon dari ${shopName}: ${summarizeItems(kasbon.items)}.`,
-    `Total: ${formatMoney(kasbon.amount)}.`,
-    'Simpan pesan ini sebagai detail hutang kamu.',
+    `💵 Total: ${formatMoney(kasbon.amount)}.`,
+    'Simpan pesan ini sebagai catatan hutang kamu.',
   ].join('\n');
 }
 
@@ -374,7 +379,9 @@ export async function draftKasbonReminder({ shop, session, message }) {
   });
   await sendText(
     message.from,
-    [`Draft pengingat untuk ${customer.name}:`, draft, 'Kirim? Balas KIRIM / BATAL.'].join('\n'),
+    [`📤 *Draft Pengingat* untuk ${customer.name}:`, '', draft, '', 'Kirim? Balas *KIRIM* / *BATAL*.'].join(
+      '\n',
+    ),
   );
 
   return { action: 'kasbon_reminder_drafted', customer, openKasbons, draft };

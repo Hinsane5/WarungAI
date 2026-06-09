@@ -307,7 +307,16 @@ export async function getDailyRecap(shop, { now = new Date() } = {}) {
     getPredictiveRestock(shop),
   ]);
 
+  const date = new Intl.DateTimeFormat('id-ID', {
+    timeZone,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(now);
+
   return {
+    date, // e.g. "Selasa, 9 Juni 2026"
     omzet: sales.reduce((total, txn) => total + (txn.totalAmount ?? 0), 0),
     txnCount: sales.length,
     // New debt opened today (kasbon docs created today). Appends to an existing open
