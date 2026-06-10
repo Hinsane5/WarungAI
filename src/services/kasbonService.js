@@ -136,17 +136,18 @@ function findMissingPrice(items) {
   return items.find((item) => !item.unitPrice);
 }
 
-function summarizeItems(items) {
+function formatItemLines(items) {
   return items
-    .map((item) => `${formatQty(item)} ${item.name} ${formatMoney(item.lineTotal)}`)
-    .join(', ');
+    .map((item) => `• ${formatQty(item)} ${item.name} — ${formatMoney(item.lineTotal)}`)
+    .join('\n');
 }
 
 function formatOwnerKasbonMessage({ customer, kasbon, score }) {
   const lines = [
     '📒 *Kasbon Tercatat*',
     `👤 ${customer.name}`,
-    `🛒 ${summarizeItems(kasbon.items)}`,
+    '🛒 Barang:',
+    formatItemLines(kasbon.items),
     `💵 Total kasbon baru: ${formatMoney(kasbon.amount)}`,
   ];
 
@@ -172,7 +173,8 @@ function formatCustomerDebtDetail({ shop, kasbon }) {
   const shopName = shop.name ?? 'Warung';
   return [
     '📒 *Detail Kasbon Kamu*',
-    `Info kasbon dari ${shopName}: ${summarizeItems(kasbon.items)}.`,
+    `Info kasbon dari ${shopName}:`,
+    formatItemLines(kasbon.items),
     `💵 Total: ${formatMoney(kasbon.amount)}.`,
     'Simpan pesan ini sebagai catatan hutang kamu.',
   ].join('\n');
