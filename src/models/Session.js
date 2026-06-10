@@ -30,6 +30,12 @@ const sessionSchema = new mongoose.Schema(
       pendingPriceItem: { type: mongoose.Schema.Types.Mixed },
       pendingPriceUpdate: { type: mongoose.Schema.Types.Mixed },
       pendingPromoOrder: { type: mongoose.Schema.Types.Mixed },
+      // Owner-in-the-loop kasbon reminder: the drafted reminder awaiting KIRIM/BATAL.
+      // These MUST be declared or Mongoose strips them on save, losing the draft between
+      // the "tagih" and "KIRIM" messages.
+      reminderCustomerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+      reminderKasbonIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Kasbon' }],
+      reminderMessage: String,
     },
     // Set when an abandoned in-flight flow is auto-cancelled; the next inbound message
     // tells the owner it didn't complete, then clears this.

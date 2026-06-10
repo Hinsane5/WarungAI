@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { describe, expect, it } from 'vitest';
 
 import { Customer, Kasbon, Product, Session, Shop, Transaction } from '../src/models/index.js';
@@ -39,5 +40,26 @@ describe('Mongoose model schemas', () => {
     expect(hasIndex(Kasbon, { shopId: 1, status: 1, dueDate: 1 })).toBe(true);
     expect(Session.schema.path('ownerPhone').options.unique).toBe(true);
     expect(Session.schema.path('state').enumValues).toContain('awaiting_kasbon_reminder_approval');
+  });
+
+  it('keeps kasbon-reminder fields in session context (not stripped on cast)', () => {
+    const customerId = new mongoose.Types.ObjectId();
+    const kasbonId = new mongoose.Types.ObjectId();
+    const session = new Session({
+      shopId: new mongoose.Types.ObjectId(),
+      ownerPhone: '+6281234567890',
+      state: 'awaiting_kasbon_reminder_approval',
+      context: {
+        reminderCustomerId: customerId,
+        reminderKasbonIds: [kasbonId],
+        reminderMessage: 'Halo Budi, ini pengingat kasbon.',
+      },
+    });
+
+    // If these paths were missing from the schema, Mongoose would drop them here, which
+    // is what broke "tagih -> KIRIM" (the customer id was lost between the two messages).
+    expect(String(session.context.reminderCustomerId)).toBe(String(customerId));
+    expect(session.context.reminderKasbonIds.map(String)).toEqual([String(kasbonId)]);
+    expect(session.context.reminderMessage).toContain('pengingat kasbon');
   });
 });
