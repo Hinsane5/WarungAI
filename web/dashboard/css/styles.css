@@ -454,6 +454,61 @@ select {
   }
 }
 
+/* Small phones: tighten oversized type + padding so nothing feels cramped or overflows. */
+@media (max-width: 480px) {
+  body {
+    font-size: 13.5px;
+  }
+
+  .topbar__inner {
+    padding: 10px 14px;
+  }
+
+  .brand {
+    font-size: 16px;
+  }
+
+  .canvas {
+    padding: 20px 14px 36px;
+  }
+
+  .card-grid {
+    gap: 16px;
+  }
+
+  .shop-title {
+    font-size: 24px;
+    line-height: 30px;
+  }
+
+  .kpi-card,
+  .widget-card {
+    padding: var(--sp-4);
+  }
+
+  .kpi-card__value {
+    font-size: 24px;
+    line-height: 30px;
+  }
+
+  .widget-card__title {
+    font-size: 16px;
+  }
+
+  .chart-box {
+    height: 220px;
+  }
+
+  .qr-img {
+    width: 140px;
+    height: 140px;
+  }
+
+  .promo-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Proactive CRM preview: captured messages + segment summary */
 .crm-preview__summary {
   font-weight: 700;

@@ -147,3 +147,15 @@
 .link-button {
   white-space: nowrap;
 }
+
+@media (max-width: 480px) {
+  .products-table th,
+  .products-table td {
+    padding: 12px 10px;
+  }
+
+  /* Stack the two-up number inputs so they're not squeezed on a phone. */
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

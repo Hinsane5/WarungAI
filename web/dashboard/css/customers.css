@@ -143,3 +143,10 @@
 .form-status.is-error {
   color: var(--wa-danger);
 }
+
+@media (max-width: 480px) {
+  .customers-table th,
+  .customers-table td {
+    padding: 12px 10px;
+  }
+}
