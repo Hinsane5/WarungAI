@@ -62,10 +62,21 @@ export async function sendChatMessage(req, res) {
 
     const sink = await runCaptured(() => routeInboundMessage(message));
 
-    return res.status(200).json({
-      ok: true,
-      replies: sink.map((item) => item.body),
-    });
+    // Split captured sends by recipient: messages back to the owner power the owner phone;
+    // anything addressed elsewhere (kasbon detail, reminders, stamp) is a customer-facing
+    // message and drives the side-by-side "customer phone" view.
+    const ownerDigits = String(shop.ownerPhone ?? '').replace(/\D/gu, '');
+    const replies = [];
+    const customerMessages = [];
+    for (const item of sink) {
+      if (String(item.to ?? '').replace(/\D/gu, '') === ownerDigits) {
+        replies.push(item.body);
+      } else {
+        customerMessages.push({ to: item.to, body: item.body });
+      }
+    }
+
+    return res.status(200).json({ ok: true, replies, customerMessages });
   } catch (error) {
     req.log?.error({ err: error }, 'Chat send failed');
     return res.status(500).json({ ok: false, error: 'chat_failed' });

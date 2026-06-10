@@ -72,7 +72,7 @@ describe('chat routes', () => {
       .post('/api/chat/send')
       .query({ token: 'dash-test' })
       .send({ text: ' masuk 2 indomie ' })
-      .expect(200, { ok: true, replies: ['Balas Y untuk simpan.'] });
+      .expect(200, { ok: true, replies: ['Balas Y untuk simpan.'], customerMessages: [] });
 
     expect(getShopByDashboardTokenMock).toHaveBeenCalledWith('dash-test');
     expect(routeInboundMessageMock).toHaveBeenCalledWith(
@@ -87,6 +87,26 @@ describe('chat routes', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it('splits messages addressed to a customer into customerMessages', async () => {
+    routeInboundMessageMock.mockImplementation(async (message) => {
+      await sendText(message.from, 'Tercatat. Benar? Balas Y / T'); // to the owner
+      await sendText('+628999000111', 'Info kasbon dari Warung Bu Sri: Rp50.000.'); // to a customer
+      return { handled: true };
+    });
+
+    await request(app)
+      .post('/api/chat/send')
+      .query({ token: 'dash-test' })
+      .send({ text: 'kasbon budi 2 rokok 50000' })
+      .expect(200, {
+        ok: true,
+        replies: ['Tercatat. Benar? Balas Y / T'],
+        customerMessages: [
+          { to: '+628999000111', body: 'Info kasbon dari Warung Bu Sri: Rp50.000.' },
+        ],
+      });
+  });
+
   it('runs browser WEBM voice notes through the audio path', async () => {
     const audio = Buffer.from('webm-opus');
 
@@ -97,7 +117,7 @@ describe('chat routes', () => {
         audioBase64: audio.toString('base64'),
         mimeType: 'audio/webm;codecs=opus',
       })
-      .expect(200, { ok: true, replies: ['Balas Y untuk simpan.'] });
+      .expect(200, { ok: true, replies: ['Balas Y untuk simpan.'], customerMessages: [] });
 
     expect(routeInboundMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -8,6 +8,9 @@ const voiceButton = document.querySelector('#voiceButton');
 const sendIcon = document.querySelector('#sendIcon');
 const presenceText = document.querySelector('#presenceText');
 const backLink = document.querySelector('#backLink');
+const customerMessageList = document.querySelector('#customerMessageList');
+const customerName = document.querySelector('#customerName');
+let customerPlaceholder = document.querySelector('#customerPlaceholder');
 
 let mediaRecorder;
 let recordedChunks = [];
@@ -29,6 +32,22 @@ function scrollToBottom() {
   messageList.scrollTop = messageList.scrollHeight;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+// Render WhatsApp-style formatting: *bold*, _italic_, and line breaks. Escapes HTML first.
+function formatWaText(text) {
+  return escapeHtml(text)
+    .replace(/\*([^*\n]+)\*/gu, '<strong>$1</strong>')
+    .replace(/_([^_\n]+)_/gu, '<em>$1</em>')
+    .replaceAll('\n', '<br>');
+}
+
 function appendBubble({ direction, text, voice = false, duration = '0:00' }) {
   const bubble = document.createElement('article');
   bubble.className = `bubble bubble--${direction}`;
@@ -42,15 +61,28 @@ function appendBubble({ direction, text, voice = false, duration = '0:00' }) {
       <span class="voice-duration">${duration}</span>
     </div><time>${nowLabel()}</time>`;
   } else {
-    const paragraph = document.createElement('p');
-    paragraph.textContent = text;
-    bubble.append(paragraph);
-    bubble.innerHTML += `<time>${nowLabel()}</time>`;
+    bubble.innerHTML = `<p>${formatWaText(text)}</p><time>${nowLabel()}</time>`;
   }
 
   messageList.append(bubble);
   scrollToBottom();
   return bubble;
+}
+
+// Incoming message on the customer's phone (what the warung sent them).
+function appendCustomerBubble({ text, to }) {
+  if (customerPlaceholder) {
+    customerPlaceholder.remove();
+    customerPlaceholder = null;
+  }
+  if (to) {
+    customerName.textContent = String(to).trim();
+  }
+  const bubble = document.createElement('article');
+  bubble.className = 'bubble bubble--in';
+  bubble.innerHTML = `<p>${formatWaText(text)}</p><time>${nowLabel()}</time>`;
+  customerMessageList.append(bubble);
+  customerMessageList.scrollTop = customerMessageList.scrollHeight;
 }
 
 function showTyping() {
@@ -110,6 +142,9 @@ async function sendPayload(payload) {
     hideTyping(typing);
     for (const reply of result.replies ?? []) {
       appendBubble({ direction: 'in', text: reply });
+    }
+    for (const customerMessage of result.customerMessages ?? []) {
+      appendCustomerBubble({ text: customerMessage.body, to: customerMessage.to });
     }
   } catch (error) {
     hideTyping(typing);
