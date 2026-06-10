@@ -224,7 +224,8 @@ select {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  /* minmax(0, …) so wide children (charts, lists) can't blow the grid past the viewport. */
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 24px;
 }
 
@@ -458,7 +459,7 @@ select {
   }
 
   .split-widget {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .chart-box {
@@ -674,6 +675,6 @@ select {
 
 @media (max-width: 880px) {
   .promo-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

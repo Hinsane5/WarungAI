@@ -49,8 +49,10 @@
 }
 
 @media (max-width: 980px) {
+  /* minmax(0, 1fr) so the column can shrink below the table's min-width; otherwise the
+     820px-wide table forces the page wider than the phone (breaks on zoom-out). */
   .customers-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
