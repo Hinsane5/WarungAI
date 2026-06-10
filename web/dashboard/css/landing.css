@@ -8,10 +8,16 @@ body {
   height: 100%;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--wa-surface);
   color: var(--wa-ink-900);
+  overflow-x: hidden;
 }
 
 .role-split {
