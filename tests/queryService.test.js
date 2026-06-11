@@ -6,6 +6,7 @@ const getPredictiveRestockMock = vi.hoisted(() => vi.fn());
 const getCreditScoresMock = vi.hoisted(() => vi.fn());
 const previewProactiveCrmMock = vi.hoisted(() => vi.fn());
 const resolveProductMock = vi.hoisted(() => vi.fn());
+const listDashboardProductsMock = vi.hoisted(() => vi.fn());
 const askWarungAssistantMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../src/messaging/whatsapp.js', () => ({ sendText: sendTextMock }));
@@ -18,7 +19,10 @@ vi.mock('../src/services/analyticsService.js', () => ({
 vi.mock('../src/services/crmPreviewService.js', () => ({
   previewProactiveCrm: previewProactiveCrmMock,
 }));
-vi.mock('../src/services/productService.js', () => ({ resolveProduct: resolveProductMock }));
+vi.mock('../src/services/productService.js', () => ({
+  resolveProduct: resolveProductMock,
+  listDashboardProducts: listDashboardProductsMock,
+}));
 
 const { classifyQuery, isAnsweredQuery, handleQuery } = await import(
   '../src/services/queryService.js'
@@ -48,6 +52,10 @@ describe('classifyQuery', () => {
     ['total kasbon semua berapa', 'kasbon'],
     ['sisa stok indomie berapa', 'stock'],
     ['indomie masih ada?', 'stock'],
+    ['liat semua produk yang saya jual', 'product_list'],
+    ['daftar barang di warung', 'product_list'],
+    ['tampilkan katalog', 'product_list'],
+    ['produk apa saja yang saya jual', 'product_list'],
   ])('classifies "%s" as %s', (text, type) => {
     expect(classifyQuery(text).type).toBe(type);
   });
@@ -86,6 +94,19 @@ describe('handleQuery', () => {
     expect(resolveProductMock).toHaveBeenCalled();
     expect(sendTextMock).toHaveBeenCalledWith(from, expect.stringContaining('12'));
     expect(result.action).toBe('query_stock');
+  });
+
+  it('lists all products in the catalog', async () => {
+    listDashboardProductsMock.mockResolvedValue([
+      { name: 'Indomie Goreng', stock: 12, unit: 'dus', sellPrice: 3000, lowStock: false },
+      { name: 'Aqua Galon', stock: 2, unit: 'galon', sellPrice: 20000, lowStock: true },
+    ]);
+    const result = await handleQuery({ shop, message: { from, text: 'liat semua produk' } });
+    expect(listDashboardProductsMock).toHaveBeenCalledWith(shop);
+    expect(sendTextMock).toHaveBeenCalledWith(from, expect.stringContaining('Daftar Produk'));
+    expect(sendTextMock).toHaveBeenCalledWith(from, expect.stringContaining('Indomie Goreng'));
+    expect(sendTextMock).toHaveBeenCalledWith(from, expect.stringContaining('Aqua Galon'));
+    expect(result.action).toBe('query_product_list');
   });
 
   it('totals outstanding kasbon', async () => {

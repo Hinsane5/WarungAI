@@ -6,7 +6,7 @@ import {
   getProfit,
 } from './analyticsService.js';
 import { previewProactiveCrm } from './crmPreviewService.js';
-import { resolveProduct } from './productService.js';
+import { listDashboardProducts, resolveProduct } from './productService.js';
 
 function money(value) {
   return new Intl.NumberFormat('id-ID', {
@@ -25,6 +25,9 @@ const SALES_RE = /\b(omzet|omset|pendapatan|pemasukan|penjualan|laku\s*berapa)\b
 const RESTOCK_RE =
   /\bmenipis\b|\bhabis\b|\bkulak(?:an)?\b|\b(?:di)?resto(?:ck|k)\b|\b(?:perlu|harus)\b.*\b(?:beli|kulak|stok)\b/iu;
 const CRM_RE = /\b(crm|ingatkan\s*pelanggan|pengingat\s*pelanggan|pelanggan.*(?:ingat|reminder))\b/iu;
+// "lihat semua produk", "daftar barang", "katalog", "produk apa saja yang saya jual", etc.
+const PRODUCT_LIST_RE =
+  /\b(?:semua|daftar|list|katalog|seluruh)\b.*\b(?:produk|barang|jual|dagangan)\b|\b(?:produk|barang|katalog|dagangan|jualan)\b.*\b(?:apa\s*(?:saja|aja)|yang\s*(?:saya\s*)?(?:di)?jual|punya|di\s*warung)\b|\b(?:lihat|liat|tampil\w*|tunjuk\w*)\b.*\b(?:produk|barang|katalog|dagangan)\b/iu;
 const KASBON_RE = /\b(kasbon|hutang|utang|piutang)\b/iu;
 const STOCK_RE = /\b(stok|stock|sisa|tinggal|masih\s*ada)\b/iu;
 
@@ -39,6 +42,7 @@ export function classifyQuery(text) {
   if (PROFIT_RE.test(t)) return { type: 'profit', period: detectPeriod(t) };
   if (RESTOCK_RE.test(t)) return { type: 'restock' };
   if (CRM_RE.test(t)) return { type: 'crm' };
+  if (PRODUCT_LIST_RE.test(t)) return { type: 'product_list' };
   if (SALES_RE.test(t)) return { type: 'sales', period: detectPeriod(t) };
   if (KASBON_RE.test(t)) return { type: 'kasbon' };
   if (STOCK_RE.test(t)) return { type: 'stock' };
@@ -140,6 +144,30 @@ async function answerStock(shop, message) {
   return { action: 'query_stock' };
 }
 
+async function answerProductList(shop, message) {
+  const products = await listDashboardProducts(shop);
+  if (products.length === 0) {
+    await sendText(
+      message.from,
+      'Belum ada produk di katalog. Catat barang dulu, contoh: "masuk 2 dus indomie 90000".',
+    );
+    return { action: 'query_product_list_empty' };
+  }
+  const lines = [`🛍️ *Daftar Produk* (${products.length}):`];
+  for (const product of products.slice(0, 25)) {
+    const price = product.sellPrice ? `, jual ${money(product.sellPrice)}` : '';
+    const low = product.lowStock ? ' ⚠️' : '';
+    lines.push(
+      `- ${product.name} — stok ${product.stock}${product.unit ? ` ${product.unit}` : ''}${price}${low}`,
+    );
+  }
+  if (products.length > 25) {
+    lines.push(`…dan ${products.length - 25} lainnya (lihat semua di dashboard).`);
+  }
+  await sendText(message.from, lines.join('\n'));
+  return { action: 'query_product_list' };
+}
+
 async function answerCrm(shop, message) {
   const preview = await previewProactiveCrm(shop);
   if (preview.customerReminders.length === 0) {
@@ -169,6 +197,8 @@ export async function handleQuery({ shop, message }) {
       return answerSales(shop, message, query.period);
     case 'restock':
       return answerRestock(shop, message);
+    case 'product_list':
+      return answerProductList(shop, message);
     case 'crm':
       return answerCrm(shop, message);
     case 'kasbon':

@@ -70,6 +70,7 @@ const HELP_MESSAGE = [
   '• Rekap bulanan → _rekap bulanan_',
   '• Laba bersih → _untung hari ini_ / _untung bulan ini_',
   '• Cek stok → _stok indomie_ atau _berapa sisa indomie_',
+  '• Lihat semua produk → _semua produk_',
   '• Perlu restok → _barang apa yang perlu direstok_',
   '',
   '💬 Tanya bebas soal warung juga bisa, contoh: _gimana cara catat penjualan?_',
