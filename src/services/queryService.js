@@ -16,6 +16,11 @@ function money(value) {
   }).format(value ?? 0);
 }
 
+// A message that STARTS with a transaction verb is a command to record, not a question —
+// e.g. "tambah stok mie" / "masuk 2 dus aqua" must go to the POS flow, not a stock lookup
+// (otherwise "tambah stok mie" gets mis-read as "cek stok tambah mie").
+const ACTION_RE =
+  /^\s*(?:masuk|tambah|laku|jual|terjual|beli|belanja|kulak(?:an)?|restock|restok|ambil|keluar)\b/iu;
 // How-to / explanatory questions go to the Gemini assistant, not a data lookup — even if
 // they happen to contain a data word (e.g. "gimana cara catat penjualan").
 const HOWTO_RE = /\b(gimana|bagaimana|cara|caranya|apa\s*itu|kenapa|kapan|jelas(?:kan|in)?)\b/iu;
@@ -38,6 +43,7 @@ function detectPeriod(text) {
 // Classify a question into a deterministic data query, or 'general' for the Gemini fallback.
 export function classifyQuery(text) {
   const t = String(text ?? '');
+  if (ACTION_RE.test(t)) return { type: 'general' };
   if (HOWTO_RE.test(t)) return { type: 'general' };
   if (PROFIT_RE.test(t)) return { type: 'profit', period: detectPeriod(t) };
   if (RESTOCK_RE.test(t)) return { type: 'restock' };
@@ -134,10 +140,11 @@ async function answerStock(shop, message) {
     await sendText(message.from, `Produk "${rawName}" belum ada di katalog.`);
     return { action: 'query_stock_not_found' };
   }
-  const low = product.reorderPoint != null && (product.stock ?? 0) <= product.reorderPoint;
+  const stock = Math.max(0, product.stock ?? 0);
+  const low = product.reorderPoint != null && stock <= product.reorderPoint;
   await sendText(
     message.from,
-    `📦 Stok *${product.name}*: ${product.stock ?? 0}${product.unit ? ` ${product.unit}` : ''}${
+    `📦 Stok *${product.name}*: ${stock}${product.unit ? ` ${product.unit}` : ''}${
       low ? ' (menipis)' : ''
     }.`,
   );

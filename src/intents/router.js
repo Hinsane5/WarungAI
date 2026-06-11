@@ -5,6 +5,8 @@ import {
   approveKasbonReminder,
   draftKasbonReminder,
   handleKasbon,
+  handleKasbonPayment,
+  parseKasbonPaymentCommand,
   parseReminderCommand,
 } from '../services/kasbonService.js';
 import {
@@ -62,6 +64,7 @@ const HELP_MESSAGE = [
   '',
   '📒 *Kasbon*',
   '• Catat → _kasbon budi 2 rokok 50000_',
+  '• Bayar/kurangi → _bayar kasbon budi 50000_',
   '• Tagih → _tagih budi_',
   '• Total kasbon → _total kasbon berapa_',
   '',
@@ -118,6 +121,7 @@ function isInterruptingCommand(text) {
       parsePriceUpdateCommand(text) ||
       parseStockCheckCommand(text) ||
       parseReminderCommand(text) ||
+      parseKasbonPaymentCommand(text) ||
       /^\s*kasbon\b/iu.test(text),
   );
 }
@@ -322,6 +326,10 @@ export async function routeInboundMessage(message) {
 
   if (parseReminderCommand(message.text)) {
     return draftKasbonReminder({ shop, session, message });
+  }
+
+  if (parseKasbonPaymentCommand(message.text)) {
+    return handleKasbonPayment({ shop, session, message });
   }
 
   if (parsePriceUpdateCommand(message.text)) {

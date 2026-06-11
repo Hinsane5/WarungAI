@@ -14,6 +14,8 @@ const handleKasbonMock = vi.hoisted(() => vi.fn());
 const draftKasbonReminderMock = vi.hoisted(() => vi.fn());
 const approveKasbonReminderMock = vi.hoisted(() => vi.fn());
 const parseReminderCommandMock = vi.hoisted(() => vi.fn());
+const parseKasbonPaymentCommandMock = vi.hoisted(() => vi.fn());
+const handleKasbonPaymentMock = vi.hoisted(() => vi.fn());
 const downloadMediaMock = vi.hoisted(() => vi.fn());
 const transcribeOggOpusMock = vi.hoisted(() => vi.fn());
 const sendTextMock = vi.hoisted(() => vi.fn());
@@ -45,6 +47,8 @@ vi.mock('../src/services/kasbonService.js', () => ({
   draftKasbonReminder: draftKasbonReminderMock,
   approveKasbonReminder: approveKasbonReminderMock,
   parseReminderCommand: parseReminderCommandMock,
+  parseKasbonPaymentCommand: parseKasbonPaymentCommandMock,
+  handleKasbonPayment: handleKasbonPaymentMock,
 }));
 
 vi.mock('../src/messaging/media.js', () => ({
@@ -88,6 +92,8 @@ describe('routeInboundMessage', () => {
     draftKasbonReminderMock.mockResolvedValue({ action: 'kasbon_reminder_drafted' });
     approveKasbonReminderMock.mockResolvedValue({ action: 'kasbon_reminder_sent' });
     parseReminderCommandMock.mockReturnValue(null);
+    parseKasbonPaymentCommandMock.mockReturnValue(null);
+    handleKasbonPaymentMock.mockResolvedValue({ action: 'kasbon_payment_recorded' });
     downloadMediaMock.mockResolvedValue(Buffer.from('ogg-opus'));
     transcribeOggOpusMock.mockResolvedValue({
       transcript: 'laku 2 indomie 3000',

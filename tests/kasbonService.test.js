@@ -46,6 +46,8 @@ const {
   computeCreditScore,
   draftKasbonReminder,
   handleKasbon,
+  handleKasbonPayment,
+  parseKasbonPaymentCommand,
   recordKasbonPayment,
 } = await import('../src/services/kasbonService.js');
 
@@ -400,5 +402,62 @@ describe('kasbonService', () => {
     expect(kasbon.save).toHaveBeenCalledTimes(1);
     expect(customer.creditScore).toMatchObject({ value: 0, band: 'good' });
     expect(result.score.band).toBe('good');
+  });
+
+  describe('kasbon payment command', () => {
+    it.each([
+      ['bayar kasbon budi 50000', 'bayar', 'budi', 50000],
+      ['kurangi kasbon Budi 25.000', 'kurangi', 'Budi', 25000],
+      ['cicil budi 10000', 'cicil', 'budi', 10000],
+      ['lunasi kasbon budi', 'lunasi', 'budi', null],
+    ])('parses "%s"', (text, verb, name, amount) => {
+      expect(parseKasbonPaymentCommand(text)).toEqual({ verb, name, amount });
+    });
+
+    it('ignores non-payment messages', () => {
+      expect(parseKasbonPaymentCommand('kasbon budi 2 rokok')).toBeNull();
+      expect(parseKasbonPaymentCommand('laku 2 indomie')).toBeNull();
+    });
+
+    it('records a payment and reports the remaining balance', async () => {
+      const customer = createCustomer();
+      const kasbon = {
+        _id: 'kasbon-1',
+        shopId: 'shop-1',
+        customerId: 'customer-1',
+        status: 'open',
+        amount: 50000,
+        payments: [],
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+      customerFindOneMock.mockResolvedValue(customer);
+      kasbonFindMock.mockResolvedValue([kasbon]);
+      kasbonFindOneMock.mockResolvedValue(kasbon);
+
+      const result = await handleKasbonPayment({
+        shop: createShop(),
+        session: createSession(),
+        message: { from: '+62812', text: 'bayar kasbon budi 50000' },
+      });
+
+      expect(kasbon.amount).toBe(0);
+      expect(kasbon.status).toBe('settled');
+      expect(sendTextMock).toHaveBeenCalledWith('+62812', expect.stringContaining('Lunas'));
+      expect(result.action).toBe('kasbon_payment_recorded');
+    });
+
+    it('asks for the amount when none is given (and not "lunasi")', async () => {
+      customerFindOneMock.mockResolvedValue(createCustomer());
+      kasbonFindMock.mockResolvedValue([{ _id: 'k1', amount: 50000 }]);
+
+      const result = await handleKasbonPayment({
+        shop: createShop(),
+        session: createSession(),
+        message: { from: '+62812', text: 'kurangi kasbon budi' },
+      });
+
+      expect(sendTextMock).toHaveBeenCalledWith('+62812', expect.stringContaining('Bayar berapa'));
+      expect(result.action).toBe('kasbon_payment_need_amount');
+    });
   });
 });

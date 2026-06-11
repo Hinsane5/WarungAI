@@ -269,15 +269,17 @@ export async function getPredictiveRestock(shop) {
 
   return products
     .map((product) => {
+      // Guard against legacy negative stock so "sisa" / days-to-stockout never go below 0.
+      const stock = Math.max(0, product.stock ?? 0);
       const dailySales = (soldQty.get(String(product._id)) ?? 0) / config.limits.salesWindowDays;
-      const daysToStockout = dailySales > 0 ? Math.ceil((product.stock ?? 0) / dailySales) : null;
+      const daysToStockout = dailySales > 0 ? Math.ceil(stock / dailySales) : null;
       const urgent =
-        (product.reorderPoint != null && (product.stock ?? 0) <= product.reorderPoint) ||
+        (product.reorderPoint != null && stock <= product.reorderPoint) ||
         (daysToStockout != null && daysToStockout <= config.limits.restockLeadTimeDays);
 
       return {
         name: product.name,
-        remaining: product.stock ?? 0,
+        remaining: stock,
         unit: product.unit ?? 'unit',
         daysToStockout,
         urgency: urgent ? 'urgent' : 'watch',

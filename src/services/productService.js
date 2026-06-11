@@ -87,7 +87,7 @@ function toDashboardProduct(product) {
     name: product.name,
     category: product.category ?? '',
     unit: product.unit ?? '',
-    stock: product.stock ?? 0,
+    stock: Math.max(0, product.stock ?? 0),
     sellPrice: product.sellPrice ?? 0,
     costPrice: product.costPrice ?? 0,
     reorderPoint: product.reorderPoint ?? 0,

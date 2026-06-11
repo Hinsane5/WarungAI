@@ -277,6 +277,98 @@ export async function recordKasbonPayment({ shopId, kasbonId, amount, note }) {
   return { kasbon, score };
 }
 
+function parseRupiah(value) {
+  const normalized = String(value ?? '').replace(/[^\d]/gu, '');
+  if (!normalized) {
+    return null;
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+// "bayar kasbon budi 50000", "kurangi kasbon budi 50000", "cicil budi 20000", "lunasi kasbon budi".
+export function parseKasbonPaymentCommand(text) {
+  const match = String(text ?? '')
+    .trim()
+    .match(/^(?<verb>bayar|kurangi|cicil|lunasi)\s+(?:kasbon\s+|hutang\s+|utang\s+)?(?<rest>.+?)\s*$/iu);
+  if (!match?.groups) {
+    return null;
+  }
+  const amountMatch = match.groups.rest
+    .trim()
+    .match(/^(?<name>.+?)(?:\s+(?:rp\s*)?(?<amount>\d[\d.,]*))?\s*$/iu);
+  if (!amountMatch?.groups?.name) {
+    return null;
+  }
+  return {
+    verb: match.groups.verb.toLowerCase(),
+    name: amountMatch.groups.name.trim(),
+    amount: amountMatch.groups.amount ? parseRupiah(amountMatch.groups.amount) : null,
+  };
+}
+
+// Record a payment that REDUCES a customer's open kasbon (owner-initiated, in WhatsApp).
+export async function handleKasbonPayment({ shop, session, message }) {
+  const parsed = parseKasbonPaymentCommand(message.text);
+  if (!parsed) {
+    return null;
+  }
+
+  const customer = await Customer.findOne(customerQuery(shop._id, parsed.name));
+  if (!customer) {
+    await sendText(message.from, `Pelanggan "${parsed.name}" belum ditemukan.`);
+    return { action: 'kasbon_payment_customer_missing' };
+  }
+
+  const openKasbons = await Kasbon.find({
+    shopId: shop._id,
+    customerId: customer._id,
+    status: 'open',
+  });
+  const outstanding = openKasbons.reduce((total, kasbon) => total + (kasbon.amount ?? 0), 0);
+  if (openKasbons.length === 0 || outstanding <= 0) {
+    await sendText(message.from, `Tidak ada kasbon terbuka untuk ${customer.name}.`);
+    return { action: 'kasbon_payment_no_debt' };
+  }
+
+  let amount = parsed.amount;
+  if (amount == null) {
+    if (parsed.verb === 'lunasi') {
+      amount = outstanding;
+    } else {
+      await setSessionState(session, 'idle', {});
+      await sendText(
+        message.from,
+        `Bayar berapa untuk ${customer.name}? Contoh: "bayar kasbon ${customer.name} 50000".`,
+      );
+      return { action: 'kasbon_payment_need_amount' };
+    }
+  }
+  amount = Math.min(amount, outstanding); // never overpay
+
+  let remaining = amount;
+  let score = null;
+  for (const kasbon of openKasbons) {
+    if (remaining <= 0) {
+      break;
+    }
+    const pay = Math.min(remaining, kasbon.amount ?? 0);
+    const result = await recordKasbonPayment({ shopId: shop._id, kasbonId: kasbon._id, amount: pay });
+    score = result.score;
+    remaining -= pay;
+  }
+
+  const newOutstanding = outstanding - amount;
+  const lunasNote = newOutstanding === 0 ? ' Lunas! 🎉' : '';
+  await sendText(
+    message.from,
+    `✅ Kasbon ${customer.name} berkurang ${formatMoney(amount)}. Sisa: ${formatMoney(
+      newOutstanding,
+    )}.${lunasNote}`,
+  );
+  return { action: 'kasbon_payment_recorded', customer, amount, newOutstanding, score };
+}
+
 export async function handleKasbon({ shop, session, message }) {
   const extraction = await extractEntities({ text: message.text, shop });
 

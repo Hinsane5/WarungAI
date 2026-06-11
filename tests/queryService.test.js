@@ -65,6 +65,11 @@ describe('classifyQuery', () => {
     expect(isAnsweredQuery('gimana cara catat penjualan')).toBe(false);
     expect(isAnsweredQuery('untung hari ini')).toBe(true);
   });
+
+  it.each(['tambah stok mie', 'masuk 2 dus aqua', 'laku 3 telur 6000', 'beli 2 rokok'])(
+    'treats action command "%s" as not-a-query so POS handles it',
+    (text) => expect(isAnsweredQuery(text)).toBe(false),
+  );
 });
 
 describe('handleQuery', () => {
