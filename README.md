@@ -1,16 +1,11 @@
 <div align="center">
 
-# 🏪🤖 WarungAI
+# WarungAI
 
 **AI-powered conversational POS & Smart CRM — running entirely inside WhatsApp.**
 
 For the Indonesian *warung kelontong*: record stock, cash, and debt by sending a text or
 voice note. No app to install, no menus to learn.
-
-![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)
-![Google Cloud](https://img.shields.io/badge/Google%20Cloud-Vertex%20AI%20·%20Speech--to--Text%20·%20BigQuery%20·%20Cloud%20Run-4285F4?logo=googlecloud&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-275%20passing-success?logo=vitest)
-![License](https://img.shields.io/badge/license-MIT-blue)
 
 *Tim MOAS · Gunadarma Code Week 2.0*
 
@@ -18,10 +13,10 @@ voice note. No app to install, no menus to learn.
 
 ---
 
-## 📖 Overview
+## Overview
 
 Indonesian *warung kelontong* (small grocery shops) handle **70%+ of daily FMCG transactions**,
-yet their numbers have collapsed from **6.1M → 3.9M (2007–2025)**. The killer isn't price
+yet their numbers have collapsed from **6.1M to 3.9M (2007–2025)**. The killer isn't price
 competition with minimarkets — it's **undetected financial leakage**: lost/expired stock
 (*shrinkage*) and uncollected informal credit (*kasbon*).
 
@@ -29,37 +24,37 @@ Conventional POS apps fail because tap-and-search is **slower than pen-and-paper
 hour. The owner already lives in WhatsApp — so **WarungAI moves the entire operational interface
 into WhatsApp** and removes all data-entry friction with AI.
 
-> Owner sends `masuk 2 dus indomie, laku 1 galon aqua` → AI extracts the line items → owner
-> confirms `Y` → stock and cash update atomically. That's it.
+> Owner sends `masuk 2 dus indomie, laku 1 galon aqua` -> AI extracts the line items -> owner
+> confirms `Y` -> stock and cash update atomically. That's it.
 
 ---
 
-## ✨ Features
+## Features
 
-| | Feature | What it does |
-|---|---------|--------------|
-| 🛒 | **Conversational POS** | Record sales/stock by **text or voice note** in natural Indonesian. Every transaction is confirmed (`Y`/`T`) before it touches the books. |
-| 📒 | **Smart Kasbon & Credit Scoring** | Digital debt book with **deterministic** behavioral risk scoring and *owner-in-the-loop* reminders. Record payments with `bayar kasbon budi 50000`. |
-| 🎁 | **Frictionless Loyalty** | Static QR → customer opens WhatsApp with `DAFTAR` pre-filled → registered. No typing, no app, verified number. |
-| 🔮 | **Predictive Restock & Proactive CRM** | Nightly jobs predict stock-outs and rebuy cycles, segment customers (RFM), and surface who to remind. |
-| 📊 | **Reports & Free-form Q&A** | Daily/monthly recap, **net profit**, and ask anything: *"berapa untung hari ini?"*, *"barang apa yang perlu direstok?"* |
-| 🖥️ | **Analytics Dashboard + B2B** | Owner web dashboard (omzet, cash flow, top items, credit scoring) plus a **regional FMCG data** view for distributors. |
+| Feature | What it does |
+|---------|--------------|
+| **Conversational POS** | Record sales/stock by **text or voice note** in natural Indonesian. Every transaction is confirmed (`Y`/`T`) before it touches the books. |
+| **Smart Kasbon & Credit Scoring** | Digital debt book with **deterministic** behavioral risk scoring and *owner-in-the-loop* reminders. Record payments with `bayar kasbon budi 50000`. |
+| **Frictionless Loyalty** | Static QR -> customer opens WhatsApp with `DAFTAR` pre-filled -> registered. No typing, no app, verified number. |
+| **Predictive Restock & Proactive CRM** | Nightly jobs predict stock-outs and rebuy cycles, segment customers (RFM), and surface who to remind. |
+| **Reports & Free-form Q&A** | Daily/monthly recap, **net profit**, and ask anything: *"berapa untung hari ini?"*, *"barang apa yang perlu direstok?"* |
+| **Analytics Dashboard + B2B** | Owner web dashboard (omzet, cash flow, top items, credit scoring) plus a **regional FMCG data** view for distributors. |
 
 ---
 
-## 💬 How it works
+## How it works
 
 ```
-🧑 laku 3 telur 6000
-🤖 📝 Cek dulu ya:
-   - 3 telur (laku Rp 6.000 @Rp 2.000)
-   Benar? Balas Y / T
-🧑 Y
-🤖 ✅ Tersimpan! Kas berubah Rp 6.000.
+Owner: laku 3 telur 6000
+Bot:   Cek dulu ya:
+       - 3 telur (laku Rp 6.000 @Rp 2.000)
+       Benar? Balas Y / T
+Owner: Y
+Bot:   Tersimpan! Kas berubah Rp 6.000.
 
-🧑 berapa untung hari ini?
-🤖 🟢 Laba bersih hari ini: Rp 145.000
-   (omzet Rp 487.000 − modal Rp 342.000)
+Owner: berapa untung hari ini?
+Bot:   Laba bersih hari ini: Rp 145.000
+       (omzet Rp 487.000 - modal Rp 342.000)
 ```
 
 The owner experience is a normal WhatsApp chat. The complexity (AI, database, scheduling) is
@@ -67,7 +62,7 @@ hidden in the backend.
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -85,13 +80,13 @@ flowchart LR
     WEB --> DB
 ```
 
-**Design principles:** WhatsApp is the UI · human-in-the-loop on money · all money/credit/restock
-logic is **deterministic** (no LLM) · the LLM only turns messy language into structured data ·
+**Design principles:** WhatsApp is the UI; human-in-the-loop on money; all money/credit/restock
+logic is **deterministic** (no LLM); the LLM only turns messy language into structured data;
 the webhook always acks `200` fast and degrades gracefully.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 **Powered by Google Cloud:**
 
@@ -108,7 +103,7 @@ Zod · Pino · node-cron · Vitest · Chart.js + Bootstrap (dashboard).
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js **20+**
@@ -142,7 +137,7 @@ npm run sim "masuk 2 dus indomie"
 
 ---
 
-## 🤖 Bot Commands
+## Bot Commands
 
 | Type | Does |
 |------|------|
@@ -150,7 +145,7 @@ npm run sim "masuk 2 dus indomie"
 | `laku 1 galon aqua 20000` | record a sale (`Y` to confirm, `T` to cancel) |
 | `kasbon budi 2 rokok 50000` | record a debt |
 | `bayar kasbon budi 50000` | reduce a customer's debt |
-| `tagih budi` → `KIRIM` | draft + send a debt reminder |
+| `tagih budi` -> `KIRIM` | draft + send a debt reminder |
 | `rekap sekarang` / `rekap bulanan` | daily / monthly report |
 | `untung hari ini` / `untung bulan ini` | net profit |
 | `semua produk` · `stok indomie` · `barang apa yang perlu direstok` | catalog / stock / restock |
@@ -161,7 +156,7 @@ Free-form questions also work (e.g. *"siapa yang masih punya kasbon?"*).
 
 ---
 
-## 🧪 Testing & Quality
+## Testing & Quality
 
 ```bash
 npm test          # unit + integration tests (Vitest)
@@ -173,7 +168,7 @@ validated against labeled Indonesian fixtures.
 
 ---
 
-## ☁️ Deployment (Cloud Run)
+## Deployment (Cloud Run)
 
 ```bash
 gcloud run deploy warungai \
@@ -186,7 +181,7 @@ callable directly, so the scheduler is just an HTTP trigger). See `DOCS/DEPLOYME
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 src/
@@ -207,16 +202,16 @@ web/
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 - **Q4 2026:** QRIS payments in-bot, expansion to 500 warung
 - **Q1 2027:** Group-buying (*kulakan bersama*), paid FMCG dashboard for principals, Looker Studio
 
-Supports **SDG 8** (Decent Work) & **SDG 9** (Industry & Innovation).
+Supports **SDG 8** (Decent Work) and **SDG 9** (Industry & Innovation).
 
 ---
 
-## 👥 Team — MOAS
+## Team — MOAS
 
 | Name | Role |
 |------|------|
@@ -227,6 +222,6 @@ Supports **SDG 8** (Decent Work) & **SDG 9** (Industry & Innovation).
 
 ---
 
-## 📄 License
+## License
 
 Released under the **MIT License**. Built for **Gunadarma Code Week 2.0**.
