@@ -10,6 +10,7 @@ const createPricedProductMock = vi.hoisted(() => vi.fn());
 const learnAliasMock = vi.hoisted(() => vi.fn());
 const setSessionStateMock = vi.hoisted(() => vi.fn());
 const mongoTransactionMock = vi.hoisted(() => vi.fn());
+const handleQueryMock = vi.hoisted(() => vi.fn());
 
 vi.mock('mongoose', () => ({
   default: {
@@ -48,6 +49,10 @@ vi.mock('../src/services/productService.js', () => ({
 
 vi.mock('../src/services/sessionService.js', () => ({
   setSessionState: setSessionStateMock,
+}));
+
+vi.mock('../src/services/queryService.js', () => ({
+  handleQuery: handleQueryMock,
 }));
 
 const {
@@ -106,6 +111,7 @@ describe('posService', () => {
       return session;
     });
     mongoTransactionMock.mockImplementation(async (callback) => callback('mongo-session'));
+    handleQueryMock.mockResolvedValue({ action: 'query_general' });
   });
 
   afterEach(() => {
@@ -548,6 +554,44 @@ describe('posService', () => {
     expect(result.action).toBe('committed');
   });
 
+  it('clamps product stock at 0 when a sale exceeds the recorded stock', async () => {
+    const product = createProduct({ _id: 'product-1', stock: 1 });
+    const transaction = {
+      _id: 'txn-neg',
+      shopId: 'shop-1',
+      status: 'pending',
+      cashDelta: 9000,
+      items: [
+        {
+          productId: 'product-1',
+          name: 'Telur',
+          rawName: 'telur',
+          qty: 3,
+          unit: null,
+          action: 'sale',
+          unitPrice: 3000,
+          lineTotal: 9000,
+        },
+      ],
+      save: vi.fn().mockResolvedValue(undefined),
+    };
+    transactionFindOneMock.mockResolvedValue(transaction);
+    productFindByIdMock.mockReturnValue(product);
+    learnAliasMock.mockResolvedValue(product);
+    const session = createSession({
+      state: 'awaiting_confirmation',
+      context: { pendingTransactionId: 'txn-neg', failureCount: 0 },
+    });
+
+    await confirmPendingTransaction({
+      shop: createShop(),
+      session,
+      message: { from: '+6281234567890', text: 'Y' },
+    });
+
+    expect(product.stock).toBe(0); // never negative (1 - 3 clamped to 0)
+  });
+
   it('cancels a pending transaction on T and offers fast-text fallback after two failures', async () => {
     const transaction = {
       status: 'pending',
@@ -579,7 +623,7 @@ describe('posService', () => {
     expect(result.action).toBe('fast_text_fallback');
   });
 
-  it('never sends an empty reply when a query has no clarification text', async () => {
+  it('delegates a query/unknown intent to the query assistant', async () => {
     extractEntitiesMock.mockResolvedValue({
       intent: 'query',
       items: [],
@@ -587,20 +631,17 @@ describe('posService', () => {
       needsClarification: false,
       clarificationQuestion: null,
     });
-    const session = createSession();
 
     const result = await handleTextPos({
       shop: createShop(),
-      session,
-      message: { from: '+6281234567890', type: 'text', text: 'rekap sekarang' },
+      session: createSession(),
+      message: { from: '+6281234567890', type: 'text', text: 'berapa untung hari ini' },
     });
 
-    expect(sendTextMock).toHaveBeenCalledWith('+6281234567890', expect.stringContaining('/bantuan'));
-    // the reply body is a non-empty string, never null/undefined
-    const [, body] = sendTextMock.mock.calls.at(-1);
-    expect(typeof body).toBe('string');
-    expect(body.length).toBeGreaterThan(0);
-    expect(result.action).toBe('clarifying');
+    expect(handleQueryMock).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.objectContaining({ text: 'berapa untung hari ini' }) }),
+    );
+    expect(result.action).toBe('query_general');
   });
 
   it('keeps the original message when asking a free-form AI clarification', async () => {

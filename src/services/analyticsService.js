@@ -288,23 +288,65 @@ export async function getPredictiveRestock(shop) {
     .slice(0, 6);
 }
 
-// Daily recap figures for one shop, from the start of the shop's local day until `now`:
-// today's omzet + committed sale count, new kasbon recorded today, and low-stock names.
+// Revenue (sum of sale line totals) and cost (qty x product.costPrice) over `sales`.
+// Profit is deterministic: it never depends on an LLM. `hasUnknownCost` flags items whose
+// product has no cost price set (so the profit shown is an under-counted estimate).
+function computeProfit(sales, products) {
+  let revenue = 0;
+  let cost = 0;
+  let hasUnknownCost = false;
+  for (const txn of sales) {
+    for (const item of txn.items ?? []) {
+      revenue += item.lineTotal ?? 0;
+      const product = item.productId ? products.get(String(item.productId)) : null;
+      if (product?.costPrice == null) {
+        hasUnknownCost = true;
+      }
+      cost += (item.qty ?? 0) * (product?.costPrice ?? 0);
+    }
+  }
+  return { revenue, cost, profit: revenue - cost, hasUnknownCost };
+}
+
+// Net profit for a period: 'today' = start of local day -> now; 'month' = start of month -> now.
+export async function getProfit(shop, { period = 'today', now = new Date() } = {}) {
+  const timeZone = timeZoneForShop(shop);
+  let from = startOfDay(now, timeZone);
+  let to = now;
+  let label = new Intl.DateTimeFormat('id-ID', {
+    timeZone,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(now);
+
+  if (period === 'month') {
+    const range = monthRange(undefined, now, timeZone);
+    from = range.from;
+    to = range.to > now ? now : range.to;
+    label = new Intl.DateTimeFormat('id-ID', { timeZone, month: 'long', year: 'numeric' }).format(
+      range.from,
+    );
+  }
+
+  const [sales, products] = await Promise.all([
+    committedSales({ shopId: shop._id, from, to }),
+    productMap(shop._id),
+  ]);
+  return { period, label, ...computeProfit(sales, products) };
+}
+
+// Daily recap figures for one shop, from the start of the shop's local day until `now`.
 export async function getDailyRecap(shop, { now = new Date() } = {}) {
   const timeZone = timeZoneForShop(shop);
   const today = startOfDay(now, timeZone);
 
-  const [sales, newKasbons, lowStock] = await Promise.all([
-    lean(
-      Transaction.find({
-        shopId: shop._id,
-        type: 'sale',
-        status: 'committed',
-        committedAt: { $gte: today, $lt: now },
-      }),
-    ),
+  const [sales, newKasbons, lowStock, products] = await Promise.all([
+    committedSales({ shopId: shop._id, from: today, to: now }),
     lean(Kasbon.find({ shopId: shop._id, createdAt: { $gte: today, $lt: now } })),
     getPredictiveRestock(shop),
+    productMap(shop._id),
   ]);
 
   const date = new Intl.DateTimeFormat('id-ID', {
@@ -315,14 +357,61 @@ export async function getDailyRecap(shop, { now = new Date() } = {}) {
     year: 'numeric',
   }).format(now);
 
+  const { revenue, profit, hasUnknownCost } = computeProfit(sales, products);
+
   return {
     date, // e.g. "Selasa, 9 Juni 2026"
-    omzet: sales.reduce((total, txn) => total + (txn.totalAmount ?? 0), 0),
+    omzet: revenue,
     txnCount: sales.length,
     // New debt opened today (kasbon docs created today). Appends to an existing open
     // kasbon keep the original createdAt, so this is "new kasbon accounts opened today".
     kasbonBaru: newKasbons.reduce((total, k) => total + (k.originalAmount ?? k.amount ?? 0), 0),
+    profit,
+    hasUnknownCost,
     lowStock: lowStock.map((item) => item.name),
+  };
+}
+
+// Monthly recap: omzet, transaction count, new kasbon, net profit, and top items for the
+// month (defaults to the current month, capped at `now` so the future isn't counted).
+export async function getMonthlyRecap(shop, { month, now = new Date() } = {}) {
+  const timeZone = timeZoneForShop(shop);
+  const range = monthRange(month, now, timeZone);
+  const to = range.to > now ? now : range.to;
+
+  const [sales, newKasbons, products] = await Promise.all([
+    committedSales({ shopId: shop._id, from: range.from, to }),
+    lean(Kasbon.find({ shopId: shop._id, createdAt: { $gte: range.from, $lt: to } })),
+    productMap(shop._id),
+  ]);
+
+  const { revenue, cost, profit, hasUnknownCost } = computeProfit(sales, products);
+
+  const itemTotals = new Map();
+  for (const txn of sales) {
+    for (const item of txn.items ?? []) {
+      const current = itemTotals.get(item.name) ?? { name: item.name, qty: 0, value: 0 };
+      current.qty += item.qty ?? 0;
+      current.value += item.lineTotal ?? 0;
+      itemTotals.set(item.name, current);
+    }
+  }
+
+  const monthLabel = new Intl.DateTimeFormat('id-ID', {
+    timeZone,
+    month: 'long',
+    year: 'numeric',
+  }).format(range.from);
+
+  return {
+    month: monthLabel,
+    omzet: revenue,
+    txnCount: sales.length,
+    kasbonBaru: newKasbons.reduce((total, k) => total + (k.originalAmount ?? k.amount ?? 0), 0),
+    profit,
+    cost,
+    hasUnknownCost,
+    topItems: [...itemTotals.values()].sort((a, b) => b.value - a.value).slice(0, 3),
   };
 }
 

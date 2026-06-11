@@ -24,7 +24,13 @@ import {
   parseDaftarCommand,
   registerLoyaltyByDaftar,
 } from '../services/loyaltyService.js';
-import { handleRecapCommand, parseRecapCommand } from '../services/recapService.js';
+import { handleQuery, isAnsweredQuery } from '../services/queryService.js';
+import {
+  handleMonthlyRecapCommand,
+  handleRecapCommand,
+  parseMonthlyRecapCommand,
+  parseRecapCommand,
+} from '../services/recapService.js';
 import { handleScheduleCommand, parseScheduleCommand } from '../services/scheduleService.js';
 import { findOrCreateByOwnerPhone } from '../services/shopService.js';
 import {
@@ -57,10 +63,19 @@ const HELP_MESSAGE = [
   '📒 *Kasbon*',
   '• Catat → _kasbon budi 2 rokok 50000_',
   '• Tagih → _tagih budi_',
+  '• Total kasbon → _total kasbon berapa_',
   '',
-  '📊 *Lainnya*',
-  '• Cek stok + promo → _cek stok indomie_',
+  '📊 *Laporan & Tanya*',
   '• Rekap hari ini → _rekap sekarang_',
+  '• Rekap bulanan → _rekap bulanan_',
+  '• Laba bersih → _untung hari ini_ / _untung bulan ini_',
+  '• Cek stok → _stok indomie_ atau _berapa sisa indomie_',
+  '• Perlu restok → _barang apa yang perlu direstok_',
+  '',
+  '💬 Tanya bebas soal warung juga bisa, contoh: _gimana cara catat penjualan?_',
+  '',
+  '📍 *Lainnya*',
+  '• Cek stok + promo distributor → _cek stok indomie_',
   '• Link daftar pelanggan → _qr loyalty_',
   '• Jadwal evaluasi → _jadwal evaluasi 19.00_',
   '',
@@ -97,6 +112,7 @@ function isInterruptingCommand(text) {
     isHelpCommand(text) ||
       isLoyaltyLinkCommand(text) ||
       parseRecapCommand(text) ||
+      parseMonthlyRecapCommand(text) ||
       parseScheduleCommand(text) ||
       parsePriceUpdateCommand(text) ||
       parseStockCheckCommand(text) ||
@@ -287,6 +303,10 @@ export async function routeInboundMessage(message) {
     return handleRecapCommand({ shop, message });
   }
 
+  if (parseMonthlyRecapCommand(message.text)) {
+    return handleMonthlyRecapCommand({ shop, message });
+  }
+
   if (parseStockCheckCommand(message.text)) {
     return handleStockCheck({ shop, session, message });
   }
@@ -305,6 +325,12 @@ export async function routeInboundMessage(message) {
 
   if (parsePriceUpdateCommand(message.text)) {
     return handlePriceUpdateCommand({ shop, session, message });
+  }
+
+  // Data questions the bot can answer deterministically (stok, omzet, untung, kasbon,
+  // restok, CRM) — handled here without an AI extraction call.
+  if (isAnsweredQuery(message.text)) {
+    return handleQuery({ shop, message });
   }
 
   if (session.state === 'fast_text_fallback') {

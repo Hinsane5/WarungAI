@@ -211,7 +211,7 @@ function localExtract(text) {
   return normalizeExtraction(result);
 }
 
-function hasUsableGemini() {
+export function hasUsableGemini() {
   // Vertex AI mode authenticates via ADC (no API key needed). Otherwise we need a real
   // AI Studio key (placeholders fall back to the deterministic local parser).
   if (config.gcp.useVertex) {
@@ -222,7 +222,7 @@ function hasUsableGemini() {
   );
 }
 
-function getGeminiClient() {
+export function getGeminiClient() {
   if (!geminiClient) {
     geminiClient = config.gcp.useVertex
       ? new GoogleGenAI({

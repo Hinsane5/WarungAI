@@ -7,6 +7,7 @@ import { Product } from '../models/Product.js';
 import { Transaction } from '../models/Transaction.js';
 import { resolvePricing } from '../utils/pricing.js';
 import { createPricedProduct, resolveProduct, learnAlias } from './productService.js';
+import { handleQuery } from './queryService.js';
 import { setSessionState } from './sessionService.js';
 
 const YES_REPLIES = new Set(['y', 'ya', 'iya', 'betul', 'benar', 'ok', 'oke']);
@@ -300,6 +301,11 @@ async function createPendingTransaction({ shop, session, message, extraction, it
 export async function handleTextPos({ shop, session, message }) {
   const extraction = await extractEntities({ text: message.text, shop });
 
+  // Questions (stok, omzet, untung, kasbon, restok, or general warung Q&A) → query assistant.
+  if (extraction.intent === 'query' || extraction.intent === 'unknown') {
+    return handleQuery({ shop, message });
+  }
+
   if (
     extraction.intent !== 'pos' ||
     extraction.needsClarification ||
@@ -523,7 +529,10 @@ async function applyProductStock(transaction, options = {}) {
       continue;
     }
 
-    product.stock += item.action === 'sale' ? -item.qty : item.qty;
+    const delta = item.action === 'sale' ? -item.qty : item.qty;
+    // Never let stock go negative (e.g. selling more than recorded because a stock-in was
+    // missed). Clamp at 0 so the book stays sane.
+    product.stock = Math.max(0, (product.stock ?? 0) + delta);
     await product.save(options);
   }
 }
