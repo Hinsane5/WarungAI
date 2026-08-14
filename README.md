@@ -7,7 +7,7 @@
 For the Indonesian *warung kelontong*: record stock, cash, and debt by sending a text or
 voice note. No app to install, no menus to learn.
 
-*Tim MOAS · Gunadarma Code Week 2.0*
+*Tim MOAS*
 
 </div>
 
